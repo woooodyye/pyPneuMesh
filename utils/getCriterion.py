@@ -15,7 +15,6 @@ def getCriterion(mmo: MOO) -> Callable[[np.ndarray], np.ndarray]:
             actionSeq = mmo.actionSeqs[i]
 
             vs, es = mmo.simulate(actionSeq)
-
             objective = mmo.objectives[i]
             indices = mmo.keyPointsIndices  # indices specifying the key points in list of vertices
             truss = Truss(vs, indices)
@@ -26,7 +25,6 @@ def getCriterion(mmo: MOO) -> Callable[[np.ndarray], np.ndarray]:
                     targetMesh = mmo.targetMeshes[i]  # face definition of target Mesh
                     obj = subObjective(truss, targetMesh)
                 score = obj.execute()
-                print(score)
                 rating.append(score)
 
         rating = np.array(rating)

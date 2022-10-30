@@ -35,3 +35,4 @@ class Mesh(object):
         scale = bboxDiagonal(truss.bv) / bboxDiagonal(self.bv)
 
         self.v = transform3d(self.v, [translationMatrix(dx, dy, dz), scaleMatrix(scale, scale, scale)])
+        self.keyPoints = transform3d(self.keyPoints, [translationMatrix(dx, dy, dz), scaleMatrix(scale, scale, scale)])

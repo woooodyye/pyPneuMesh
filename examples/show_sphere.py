@@ -1,6 +1,6 @@
 import pickle5
 
-result = pickle5.load(open('./output/GA_1012-18:58:5/iPool_39', 'rb'))
+result = pickle5.load(open('./output/GA_1026-19:34:36/iPool_4', 'rb'))
 
 print('{:20s} {:20s} {:20s} {:20s}'.format('move forward', 'face forward', 'turn left', 'lower height'))
 for i in range(len(result['elitePool'])):
@@ -13,5 +13,7 @@ for i in range(len(result['elitePool'])):
 moo = result['elitePool'][0]['moo']
 # moo.model.show()  # visualize the truss static shape and channels
 
-actionSeq = moo.actionSeqs[0]  # control sequence of the second objective
-moo.simulate(actionSeq, nLoops=2, visualize=True)  # visualize the trajectory of the control
+actionSeq0 = moo.actionSeqs[0]  # control sequence of the second objective
+actionSeq1 = moo.actionSeqs[1]
+assert (actionSeq0.all() == actionSeq1.all())
+moo.simulate(actionSeq1, nLoops=2, visualize=True)  # visualize the trajectory of the control

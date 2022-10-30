@@ -128,7 +128,7 @@ class GeneticAlgorithm(object):
         self.setting.load(setting)
 
     def initPoolFromScratch(self, sizePool):
-        genePool = [{'moo': MOO(self.MOOSetting, randInit=True), 'score': None} for _ in range(sizePool)]
+        genePool = [{'moo': MOO(self.MOOSetting, randInit=False), 'score': None} for _ in range(sizePool)]
         return genePool
 
     def evaluate(self, genePool, nWorkers=-1):
@@ -169,6 +169,23 @@ class GeneticAlgorithm(object):
                                                             Rs[i], CDs[i]))
 
         return genePool
+
+    # def select(self, genePool, nSurvivedMax):
+    #     scores = [gene['score'] for gene in genePool]
+    #     Rs = getR(np.array(scores))
+    #     CDs = getCD(np.array(scores), Rs)
+    #     idsSorted = np.lexsort((CDs, Rs))[::-1]
+    #     idsSurvived = idsSorted[:nSurvivedMax]
+    #     genePool = [genePool[i] for i in idsSurvived]
+    #
+    #     logging.info("{:<10} {:<15} {:<40} {:<10} {:<10}".format('i', 'address', 'score', 'R', 'CD'))
+    #
+    #     for i in range(len(genePool)):
+    #         logging.info(
+    #             "{:<10} {:<15} {:<40} {:<10} {:<10}".format(i, str(genePool[i]['moo'])[-15:], str(genePool[i]['score']),
+    #                                                         Rs[i], CDs[i]))
+    #
+    #     return genePool
 
     def mutateAndRegenerate(self, genePool, sizePool):
         nGeneration = sizePool - len(genePool)

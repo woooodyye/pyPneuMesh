@@ -377,7 +377,6 @@ class MOO:
         if actionSeqs.ndim == 2:
             actionSeqs = np.expand_dims(actionSeqs, 0)
         self.actionSeqs = actionSeqs
-
         if self.randInit:
             self.actionSeqs = np.random.randint(0, 2, [self.numObjectives, self.numChannels, self.numActions])
 

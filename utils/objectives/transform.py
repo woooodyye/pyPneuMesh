@@ -22,9 +22,13 @@ class KeyPointsAlign(Transform):
         super().__init__(truss, mesh)
 
     def execute(self):
+        # self.mesh.affine(self.truss)
         mesh_keypoints: np.ndarray = self.mesh.keyPoints
 
         v_keypoints = self.truss.vs[-1, self.truss.indices]
+
+        print("v keypoints s", v_keypoints)
+        print("mesh keypoints is", mesh_keypoints)
 
         assert (v_keypoints.shape == mesh_keypoints.shape)
         return -np.sqrt(((v_keypoints - mesh_keypoints) ** 2).sum(1)).mean()
