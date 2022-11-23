@@ -146,7 +146,7 @@ class GeneticAlgorithm(object):
 
         with Pool(nWorkers if nWorkers != -1 else multiprocessing.cpu_count()) as p:
             scores = np.array(p.map(criterion, genePool))
-        
+
         # scores = np.array([criterion(gene) for gene in genePool])
 
         for i in range(len(genePool)):
@@ -256,7 +256,7 @@ class GeneticAlgorithm(object):
             data = self.setting.data()
             for key in data:
                 logging.info("{}: {}".format(key, data[key]))
-                
+
         sizePool = self.setting.nGenesPerPool
         nGenPerPool = self.setting.nGensPerPool
         nSurvivedMax = self.setting.nSurvivedMax

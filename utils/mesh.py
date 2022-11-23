@@ -31,7 +31,7 @@ class Mesh(object):
 
     # Longest side of mesh should align with the smallest side of truss in bounding box
     # hardcoded based on the bv structure
-    def calc_scale(self, truss_bv, mesh_bv, alpha=1.0):
+    def calc_scale(self, truss_bv, mesh_bv, alpha=0.9):
         truss_x = abs(truss_bv[0, 0] - truss_bv[4, 0])
         truss_y = abs(truss_bv[0, 1] - truss_bv[2, 1])
         truss_z = abs(truss_bv[0, 2] - truss_bv[1, 2])
@@ -64,4 +64,4 @@ class Mesh(object):
         T, R, t = best_fit_transform(v_prev, v)
 
         self.v = transform3d(self.v, [T])
-        self.keyPoints = transform3d(self.v, [T])
+        self.keyPoints = transform3d(self.keyPoints, [T])

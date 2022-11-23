@@ -3,7 +3,7 @@ from utils.GA import GeneticAlgorithm
 import argparse
 import multiprocessing
 
-from utils.objectives.locomotion import MoveForward, FaceForward, TurnLeft, LowerBodyMax
+from utils.objectives.transform import KeyPointsAlign, SurfaceAlign
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--checkpoint', help='The directory of the checkpoint file.')
@@ -12,17 +12,18 @@ args = parser.parse_args()
 MOOsetting = {
     'modelDir': './data/half_helmet.json',
     'numChannels': 4,
-    'numActions': 4,
-    'numObjectives': 3,
+    'numActions': 1,
+    'numObjectives': 1,
+    'numTargets': 1,
     "channelMirrorMap": {
-        0: -1,
-        1: -1,
+        0: 1,
         2: -1,
         3: -1
     },
-    # 'env': ['flat', 'cube', 'cave'],
-    'objectives': [[MoveForward, FaceForward], [TurnLeft], [LowerBodyMax]],
-    'nLoopSimulate': 4
+    'objectives': [[KeyPointsAlign]],
+    'meshDirs': ['./data/half_helmet_mesh.json'],
+    'keyPointsIndices': [9, 22, 23],
+    'nLoopSimulate': 1
 }
 
 nWorkers = multiprocessing.cpu_count()
