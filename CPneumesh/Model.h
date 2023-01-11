@@ -40,7 +40,8 @@ public:
 
   Eigen::MatrixXi getE();
 
-  Eigen::VectorXd step(Eigen::VectorXd times, Eigen::MatrixXd lengths, int numSteps);
+//  Eigen::VectorXd step(Eigen::VectorXd times, Eigen::MatrixXd lengths, int numSteps);
+  std::pair<Eigen::VectorXd, Eigen::VectorXd> step(Eigen::VectorXd times, Eigen::MatrixXd lengths, int numSteps);
 
 };
 

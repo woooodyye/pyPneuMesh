@@ -36,7 +36,7 @@ MatrixXi Model::getE() {
   return this->E;
 }
 
-VectorXd Model::step(VectorXd times, MatrixXd lengths, int numSteps) {
+pair<VectorXd, VectorXd> Model::step(VectorXd times, MatrixXd lengths, int numSteps) {
   MatrixXd V = V0;
   Vel.setZero();
 
@@ -47,7 +47,12 @@ VectorXd Model::step(VectorXd times, MatrixXd lengths, int numSteps) {
 
   VectorXd LTarget = lengths.row(0);   // target length of penumatic actuation
 
-  VectorXd Vs((numSteps + 1) * V.rows() * 3);
+  VectorXd Vs((numSteps + 1) * V.rows() * 3); //allocate larger space for VS ... // try to return a pair
+
+  //maybe don't care the first step or just set it to zero for data alignment
+  VectorXd eEnergys((numSteps + 1) * E.rows());
+
+
   for (int iRow = 0; iRow < V.rows(); iRow++) {
     for (int iCol=0; iCol < V.cols(); iCol++) {
       Vs((0 * V.rows() + iRow) * 3 + iCol) = V(iRow, iCol);
@@ -127,6 +132,15 @@ VectorXd Model::step(VectorXd times, MatrixXd lengths, int numSteps) {
 
     V += Vel * h;
 
+    //calculate Energy on each Edge..
+    auto newL = getL(V, E);
+    for (int iE = 0; iE < E.rows(); iE++) {
+//        eEnergys[iE] = FEdge[iE] * (L[iE] - newL[iE])
+          eEnergys((iStep)* iE ) = FEdge[iE] * (L[iE] - newL[iE]);
+    }
+    //allocate extra space for VS and then
+
+    //return value in Vs.. need to add Energys as well
     for (int iRow = 0; iRow < V.rows(); iRow++) {
       for (int iCol=0; iCol < V.cols(); iCol++) {
         Vs(( (iStep + 1) * V.rows() + iRow) * 3 + iCol) = V(iRow, iCol);
@@ -136,7 +150,7 @@ VectorXd Model::step(VectorXd times, MatrixXd lengths, int numSteps) {
   }
 
 
-  return Vs;
+  return make_pair(Vs, eEnergys);
 }
 
 
