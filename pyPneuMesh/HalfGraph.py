@@ -4,19 +4,20 @@ import pathlib
 
 from pyPneuMesh.Model import Model
 
+
 class HalfGraph(object):
     def __init__(self, model: Model, graphSetting):
         self.channelMirrorMap = graphSetting['channelMirrorMap'].copy()
         self.model = model
         self.edgeMirrorMap = self.__getEdgeMirrorMap()
-        
+
         self.ins_o = []  # nn, original indices of nodes in a halfgraph
         self.edges = []  # indices of two incident nodes, ne x 2, ne is the number of edges in a halfgraph
         self.ies_o = []  # ne, original indices of edges in a halfgraph
         self.channels = []  # ne, indices of channels
         self.contractions = []  # ne, int value of contractions
         self.esOnMirror = []  # ne, bool, if the edge in on the mirror plane
-        
+
         # region assigning eLeft, eRight, eMiddle
         eLeft = []
         eRight = []
@@ -34,7 +35,7 @@ class HalfGraph(object):
                 else:
                     eLeft.append(ieMirror)
                     eRight.append(ie)
-                    
+
                 edgeMirrorMap.pop(ieMirror)
         self.eLeft = eLeft
         self.eRight = eRight
@@ -44,7 +45,7 @@ class HalfGraph(object):
         esInfo = []
         for ie in eLeft + eMiddle:
             contraction = self.model.contractionLevel[ie]
-    
+
             esInfo.append((self.model.e[ie][0], self.model.e[ie][1],
                            {
                                'ie': ie,
@@ -56,36 +57,39 @@ class HalfGraph(object):
                           )
         self.__add_edges_from(esInfo)
 
+    # Modifying it weirdly
+    # May not be consistent right now
     def __getEdgeMirrorMap(self):
         threshold = 0.01
-        
+
         vertexMirrorMap = dict()
         for iv, v in enumerate(self.model.v0):
             if iv not in vertexMirrorMap:
-                if abs(v[1]) < threshold:
+                if abs(v[0]) < threshold:
                     vertexMirrorMap[iv] = -1  # on the mirror plane
                 else:  # mirrored with another vertex
                     for ivMirror, vMirror in enumerate(self.model.v0):
                         if ivMirror == iv:
                             continue
-                        
-                        if abs(vMirror[0] - v[0]) < threshold and \
-                            abs(vMirror[2] - v[2]) < threshold and \
-                                abs(-vMirror[1] - v[1]) < threshold:
-                            assert(iv not in vertexMirrorMap)
+
+                        if abs(vMirror[1] - v[1]) < threshold and \
+                                abs(vMirror[2] - v[2]) < threshold and \
+                                abs(-vMirror[0] - v[0]) < threshold:
+                            assert (iv not in vertexMirrorMap)
                             assert (ivMirror not in vertexMirrorMap)
                             vertexMirrorMap[iv] = ivMirror
                             vertexMirrorMap[ivMirror] = iv
-            
+
             if iv not in vertexMirrorMap:
-                assert(False)
-                
+                print(iv)
+                assert (False)
+
         edgeMirrorMap = dict()
-    
+
         for ie, e in enumerate(self.model.e):
             if ie in edgeMirrorMap:
                 continue
-        
+
             iv0 = e[0]
             iv1 = e[1]
             if vertexMirrorMap[iv0] == -1:
@@ -101,6 +105,8 @@ class HalfGraph(object):
                 edgeMirrorMap[ie] = -1
             else:
                 iesMirrored = (eM == self.model.e).all(1) + (eM[::-1] == self.model.e).all(1)
+                if iesMirrored.sum() != 1:
+                    print("the vertex is", eM)
                 assert (iesMirrored.sum() == 1)
                 ieMirrored = np.where(iesMirrored)[0][0]
                 assert (ieMirrored not in edgeMirrorMap)
@@ -109,12 +115,12 @@ class HalfGraph(object):
                 else:
                     edgeMirrorMap[ie] = ieMirrored
                     edgeMirrorMap[ieMirrored] = ie
-    
+
         return edgeMirrorMap
 
     def saveGraphSetting(self, folderDir, name):
         graphSetting = self.getGraphSetting()
-    
+
         folderPath = pathlib.Path(folderDir)
         graphSettingPath = folderPath.joinpath("{}.graphsetting".format(name))
         np.save(str(graphSettingPath), graphSetting)
@@ -154,19 +160,19 @@ class HalfGraph(object):
             in1 = np.where(self.ins_o == eInfo[1])[0][0]
             self.edges[i, 0] = in0
             self.edges[i, 1] = in1
-            
+
     def toModel(self):
         for i, edge in enumerate(self.edges):
-        
+
             ie = self.ies_o[i]
-        
+
             contractionLevel = self.contractions[i]
             ic = self.channels[i]
-        
+
             # region set edgeChannel
             self.model.edgeChannel[ie] = ic
             ieMirror = self.edgeMirrorMap[ie]
-        
+
             if ieMirror == -1:
                 pass
             else:
@@ -178,7 +184,7 @@ class HalfGraph(object):
                         icMirror = ic
                     self.model.edgeChannel[ieMirror] = icMirror
             # endregion
-        
+
             # set maxContraction
             self.model.contractionLevel[ie] = contractionLevel
             if ieMirror != -1:
@@ -188,11 +194,11 @@ class HalfGraph(object):
         stuck = True
         while stuck:
             stuck = False
-            
+
             self.channels *= 0
             self.channels += -1
             self.contractions *= 0
-            
+
             # init channels
             iesUnassigned = set(np.arange(len(self.edges)))  # halfgraph indices of edges
             iesIncidentMirrorUnassigned = set(self.iesIncidentMirror())
@@ -229,7 +235,8 @@ class HalfGraph(object):
                 ic = np.random.choice(list(self.channelMirrorMap.keys()))
                 iesUnassignedAroundChannel = self.iesAroundChannel(ic)
                 if self.iesNotMirror() is not None and iesUnassignedAroundChannel is not None:
-                    iesUnassignedAroundChannelNotMirror = np.intersect1d(iesUnassignedAroundChannel, self.iesNotMirror())
+                    iesUnassignedAroundChannelNotMirror = np.intersect1d(iesUnassignedAroundChannel,
+                                                                         self.iesNotMirror())
                 else:
                     iesUnassignedAroundChannelNotMirror = None
 
@@ -246,20 +253,20 @@ class HalfGraph(object):
                 numNotUpdate = 0
                 iesUnassigned.remove(ieToAssign)
                 self.channels[ieToAssign] = ic
-                
+
         self.contractions = np.random.randint(0, self.model.NUM_CONTRACTION_LEVEL, self.contractions.shape)
-        
+
         self.toModel()
-        
+
     def mutate(self, graphMutationChance, contractionMutationChance):
         if np.random.random() < graphMutationChance:
             self.mutateGraph()
         self.mutateContraction(contractionMutationChance)
         self.toModel()
-        
+
     def mutateGraph(self):
         # choose a random edge and change its channel
-    
+
         # find all edges that can be changed
         # randomly pick one edge
         # change its channel to one of the available channels incident to the edge
@@ -267,12 +274,12 @@ class HalfGraph(object):
         for ic in self.channelMirrorMap.keys():
             iess.append(self.iesAroundChannel(ic, unassigned=False))
         ies = np.array(list(set(np.concatenate(iess))))
-    
+
         succeeded = False
         while not succeeded:
             ie = np.random.choice(ies)
             ic_original = self.channels[ie]
-        
+
             ies_incident = self.incidentEdges(self.edges[ie])
             ics_available = []
             for ie_incident in ies_incident:
@@ -280,23 +287,23 @@ class HalfGraph(object):
                 icMirror = self.channelMirrorMap[ic]
                 if not (icMirror != -1 and self.esOnMirror[ie_incident]) and ic != ic_original:
                     ics_available.append(ic)
-        
+
             while len(ics_available) > 0:
                 ic = np.random.choice(ics_available)
                 self.channels[ie] = ic
-            
+
                 channelsConnected = True
-            
+
                 for iChannel in self.channelMirrorMap.keys():
                     channelsConnected *= self.channelConnected(iChannel)
-            
+
                 if channelsConnected:
                     succeeded = True
                     break
                 else:
                     self.channels[ie] = ic_original
                     ics_available.remove(ic)
-                    
+
     def mutateContraction(self, chance):
         maskMutation = np.random.rand(len(self.contractions))
         contraction = np.random.randint(
@@ -312,7 +319,7 @@ class HalfGraph(object):
                 tmp = self.contractions[ie]
                 self.contractions[ie] = graph.contractions[ie]
                 graph.contractions[ie] = tmp
-        
+
     def iesIncidentMirror(self):
         # indices of edges on / connecting to the mirror plane
         ies = np.arange(len(self.edges))[self.esOnMirror.copy()]

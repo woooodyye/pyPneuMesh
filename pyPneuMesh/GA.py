@@ -23,11 +23,11 @@ class GA(object):
         if GASetting:
             GASetting, genePool, elitePool, nPoolsTrained, secondsPassed, checkpointFolderPath \
                 = self.__initFromGASetting(GASetting)
-        
-        else:   # use GACheckpointDir
+
+        else:  # use GACheckpointDir
             GASetting, genePool, elitePool, nPoolsTrained, secondsPassed, checkpointFolderPath \
                 = self.__initFromGACheckpointDir(GACheckpointDir)
-        
+
         # load GASetting
         self.GASetting = GASetting
         self.nGenesPerPool = GASetting['nGenesPerPool']
@@ -39,24 +39,23 @@ class GA(object):
         self.contractionCrossChance = GASetting['contractionCrossChance']
         self.actionCrossChance = GASetting['actionCrossChance']
         self.crossChance = GASetting['crossChance']
-        self.randomInit = GASetting['randomInit']       # randomize the init truss or follow the init truss
-        
+        self.randomInit = GASetting['randomInit']  # randomize the init truss or follow the init truss
+
         self.nWorkers = GASetting['nWorkers']
         self.folderPath = pathlib.Path(GASetting['folderDir'])
-        
+
         # init constants
         self.dataFolderPath = self.folderPath.joinpath('data')
         self.mooDict = readMooDict(str(self.dataFolderPath))
-        
+
         self.checkpointFolderPath = checkpointFolderPath
-        
+
         # init variables
         self.nPoolsTrained = nPoolsTrained
         self.secondsPassed = secondsPassed
-        
+
         self.genePool = genePool
         self.elitePool = elitePool
-
 
     @staticmethod
     def __initFromGASetting(GASetting):
@@ -65,14 +64,14 @@ class GA(object):
         secondsPassed = 0
         genePool = []
         elitePool = []
-    
+
         folderPath = pathlib.Path(GASetting['folderDir'])
         startTime = datetime.datetime.now()
         nowStr = startTime.strftime("%Y-%m-%d_%H-%M-%S")
         checkpointFolderPath = folderPath.joinpath('output').joinpath(nowStr)
         checkpointFolderPath.mkdir(parents=True, exist_ok=True)
         return GASetting, genePool, elitePool, nPoolsTrained, secondsPassed, checkpointFolderPath
-    
+
     @staticmethod
     def __initFromGACheckpointDir(GACheckpointDir):
         gaCheckpoint = readNpy(GACheckpointDir)
@@ -80,14 +79,14 @@ class GA(object):
             print('nSurvivedMax')
             gaCheckpoint['GASetting']['nSurvivedMin'] = gaCheckpoint['GASetting']['nSurvivedMax']
             del gaCheckpoint['GASetting']['nSurvivedMax']
-        
+
         GASetting = gaCheckpoint['GASetting']
         nPoolsTrained = gaCheckpoint['nPoolsTrained']
         secondsPassed = gaCheckpoint['secondsPassed']
-        
+
         genePoolMOODict = gaCheckpoint['genePoolMOODict']
         elitePoolMOODict = gaCheckpoint['elitePoolMOODict']
-        
+
         genePool = [
             {'moo': MOO(mooDict=geneMooDict['mooDict'], randomize=False),
              'score': geneMooDict['score']}
@@ -96,13 +95,13 @@ class GA(object):
             {'moo': MOO(mooDict=eliteMOODict['mooDict'], randomize=False),
              'score': eliteMOODict['score']}
             for eliteMOODict in elitePoolMOODict]
-        
+
         checkpointFolderPath = pathlib.Path(GACheckpointDir).parent
         return GASetting, genePool, elitePool, nPoolsTrained, secondsPassed, checkpointFolderPath
-        
+
     def __initializeLogger(self):
         logging.getLogger().handlers = []
-        
+
         logging.basicConfig(
             filename=str(self.checkpointFolderPath.joinpath('log.txt')),
             filemode='a', format='%(message)s',
@@ -110,7 +109,7 @@ class GA(object):
         )
         console = logging.StreamHandler()
         logging.getLogger().addHandler(console)
-        
+
         now = datetime.datetime.now()
         logging.info(now.strftime("%Y-%m-%d %H:%M:%S"))
 
@@ -135,7 +134,7 @@ class GA(object):
         objectivesString = '|'.join(objectiveStrings)
 
         logging.info("{:<20.20s}{}".format('', objectivesString))
-        
+
     def logPool(self, pool, name=None,
                 printing=False,
                 showAllGenes=False,
@@ -146,13 +145,13 @@ class GA(object):
                 Rs, _ = self.getRCD(np.array([gene['score'] for gene in pool]))
             else:
                 Rs = None
-                
+
             for iGene, gene in enumerate(pool):
                 scoresStr = ['{:<20.6s}'.format(str(score)) for score in gene['score']]
                 if Rs is not None:
                     scoresStr.append('{:<20d}'.format(Rs[iGene]))
                 scoreStr = "".join(scoresStr)
-                
+
                 outputString = "{:<8d}{}".format(iGene, scoreStr)
                 lines.append(outputString)
 
@@ -166,7 +165,7 @@ class GA(object):
         scoreStr = "".join(scoresStr)
         scoreStr = "{:<20s}{}".format(name if name is not None else "", scoreStr)
         lines.append(scoreStr)
-        
+
         if printing:
             for line in lines:
                 print(line)
@@ -220,16 +219,17 @@ class GA(object):
             meanScores = []
 
         return meanScores, maxScores
-    
+
     def evaluate(self):
-        
+
         def criterion(gene):
-            if gene['score'] is not None:   # already calculated
+            if gene['score'] is not None:  # already calculated
                 moo: MOO = gene['moo']
                 score = moo.evaluate()
-                
-                if np.linalg.norm(score - gene['score']) > 0.001:
-                    breakpoint()
+
+                # temporariliy removed breakpoint
+                # if np.linalg.norm(score - gene['score']) > 0.001:
+                #     breakpoint()
                 # score = gene['score']
             else:
                 moo: MOO = gene['moo']
@@ -254,14 +254,14 @@ class GA(object):
         ratingsCol = ratings.reshape([ratings.shape[0], 1, ratings.shape[1]])
         ratingsRow = ratings.reshape([1, ratings.shape[0], ratings.shape[1]])
         dominatedMatrix = (ratingsCol <= ratingsRow).all(2) * (ratingsCol < ratingsRow).any(2)
-    
+
         Rs = np.ones(len(ratings), dtype=int) * -1
         R = 0
         while -1 in Rs:
             nonDominated = (~dominatedMatrix[:, np.arange(len(Rs))[Rs == -1]]).all(1) * (Rs == -1)
             Rs[nonDominated] = R
             R += 1
-        
+
         # get CD
         CDMatrix = np.zeros_like(ratings, dtype=np.float)
         sortedIds = np.argsort(ratings, axis=0)
@@ -293,7 +293,7 @@ class GA(object):
             nGenesSurviving = len(self.genePool)
             nGenesToClone = min(self.nGenesPerPool - nGenesSurviving, nGenesSurviving)
             nGenesToInitialize = self.nGenesPerPool - (nGenesToClone + nGenesSurviving)
-            
+
             # mutation or cross
             for i in range(nGenesToClone):
                 if np.random.random() < self.crossChance:
@@ -312,7 +312,7 @@ class GA(object):
                     iMoo = np.random.randint(nGenesToClone)
                     mooExisting: MOO = self.genePool[iMoo]['moo']
                     moo = MOO(mooDict=mooExisting.getMooDict(), randomize=False)
-                    
+
                     moo.mutate(
                         graphMutationChance=self.graphMutationChance,
                         actionMutationChance=self.actionMutationChance,
@@ -320,8 +320,7 @@ class GA(object):
                     )
                     geneNew = {'moo': moo, 'score': None}
                 self.genePool.append(geneNew)
-                
-            
+
             # initialize
             for i in range(nGenesToInitialize):
                 if self.randomInit:
@@ -350,26 +349,25 @@ class GA(object):
     def elitePool2genePool(self):
         self.genePool = self.elitePool[:self.nGenesPerPool]
         self.elitePool = []
-        
-        
+
     def run(self):
         self.__initializeLogger()
-        
+
         while True:
             t0 = time.time()
             self.logLine("=")
             logging.info("Training ElitePool: {}".format(self.nPoolsTrained))
             self.logLine("=")
             self.logObjectives()
-            
+
             for iGen in range(self.nGensPerPool):
                 self.refillGenePoolByMutationCrossRegeneration()
                 self.evaluate()
                 self.select()
-                
+
                 print(len(self.genePool))
                 self.logPool(self.genePool, "gen:{:>4d}".format(iGen), showAllGenes=True, showRValue=True)
-            
+
             self.collectElites()
             if self.elitePoolFull():
                 logging.info('elitePoolFull')

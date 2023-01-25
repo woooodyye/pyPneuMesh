@@ -143,10 +143,48 @@ class Model(object):
 
         cModel = CModel(self.k, self.h, self.gravity, self.damping, self.friction, self.v0, self.e,
                         self.CONTRACTION_SPEED)
-        vs = cModel.step(times, lengths, numSteps)
-        breakpoint()
+        vs, vEnergys = cModel.step(times, lengths, numSteps)
+        # breakpoint()
         vs = vs.reshape((numSteps + 1), len(self.v0), 3)
-        return vs
+        vEnergys = vEnergys.reshape((numSteps + 1), len(self.e))
+        return vs, vEnergys
+
+    # def getL(self, V, E):
+    #     return V
+
+    # Numpy version of step, used to compare with c++ version.
+    # def stepSlow(self, times, lengths, numSteps):
+    #     v = self.v0
+    #     vel = 0  # this maybe numpy too
+    #
+    #     LTarget = lengths[0]
+    #     L0 = self.getL(self.v0, self.e)
+    #     for iStep in range(numSteps):
+    #         force = 0  # numpy array
+    #
+    #         time = self.h * iStep
+    #         # set LTarget
+    #         for iTime in range(len(times)):
+    #             if time > times[iTime]:
+    #                 LTarget = lengths[iTime]
+    #
+    #     # set L0
+    #     # self.e.length
+    #     for iE in range(self.e.length()):
+    #         if (L0[iE] != LTarget[iE]):
+    #             diff = LTarget[iE] - L0[iE];
+    #             sign = diff / abs(diff);
+    #             dL0 = sign * self.CONTRACTION_SPEED * h;
+    #             if abs(dL0) > abs(diff):
+    #                 L0[iE] = LTarget[iE]
+    #             else:
+    #                 L0[iE] += dL0
+    #
+    #     # calculate edge force
+    #     newL = self.getL(v, self.e);
+    #     vec01 = V(E(all, 1), all) - V(E(all, 0), all); # vectors from V[e[0]] to V[e[1]]
+    #
+    #     for iE in range(self.e.length()):
 
     def show(self, v=None):
         import polyscope as ps
@@ -164,6 +202,7 @@ class Model(object):
             es = self.e[ies]
             cs = ps.register_curve_network(str(ic), v, es)
 
+        ps.register_point_cloud('15', v[15:16])
         ps.show()
 
     def animate(self, vs, speed=1.0, singleColor=False):
@@ -207,7 +246,7 @@ class Model(object):
                     cs.update_node_positions(v)
                 except:
                     pass
-
+        ps.register_curve_network('y axis', np.array([[0, 0, 0], [0, 1, 0]]), np.array([[0, 1]]))
         ps.set_user_callback(callback)
         ps.show()
 

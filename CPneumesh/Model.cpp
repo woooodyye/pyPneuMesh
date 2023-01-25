@@ -36,8 +36,10 @@ MatrixXi Model::getE() {
   return this->E;
 }
 
-pair<VectorXd, VectorXd> Model::step(VectorXd times, MatrixXd lengths, int numSteps) {
+std::pair<Eigen::VectorXd, Eigen::VectorXd> Model::step(VectorXd times, MatrixXd lengths, int numSteps) {
   MatrixXd V = V0;
+//  Eigen::VectorXd output;
+
   Vel.setZero();
 
 //  Vel.setOnes();
@@ -47,7 +49,7 @@ pair<VectorXd, VectorXd> Model::step(VectorXd times, MatrixXd lengths, int numSt
 
   VectorXd LTarget = lengths.row(0);   // target length of penumatic actuation
 
-  VectorXd Vs((numSteps + 1) * V.rows() * 3); //allocate larger space for VS ... // try to return a pair
+  VectorXd Vs((numSteps + 1) * V.rows() * 3);
 
   //maybe don't care the first step or just set it to zero for data alignment
   VectorXd eEnergys((numSteps + 1) * E.rows());
@@ -133,10 +135,11 @@ pair<VectorXd, VectorXd> Model::step(VectorXd times, MatrixXd lengths, int numSt
     V += Vel * h;
 
     //calculate Energy on each Edge..
+    //Ignore negative work from pump rn
     auto newL = getL(V, E);
     for (int iE = 0; iE < E.rows(); iE++) {
 //        eEnergys[iE] = FEdge[iE] * (L[iE] - newL[iE])
-          eEnergys((iStep)* iE ) = FEdge[iE] * (L[iE] - newL[iE]);
+          eEnergys((iStep)* E.rows()  + iE) = abs(L[iE] - newL[iE]);
     }
     //allocate extra space for VS and then
 
@@ -147,9 +150,11 @@ pair<VectorXd, VectorXd> Model::step(VectorXd times, MatrixXd lengths, int numSt
       }
     }
 
+//    output.conservativeResize(Vs.size() + eEnergys.size());
+//    output.block(0, 0, Vs.size(), 1) = Vs;
+//    output.block(Vs.size(), 0, eEnergys.size(), 1) = eEnergys;
   }
-
-
+//  return output;
   return make_pair(Vs, eEnergys);
 }
 

@@ -1,6 +1,10 @@
+import copy
+import pathlib
+
 import numpy as np
 
 from pyPneuMesh.Model import Model
+
 
 class FullGraph(object):
     def __init__(self, model):
@@ -112,3 +116,16 @@ class FullGraph(object):
                     self.channels[ie] = icOld  # revert channel change
         print('mutation failed')
         return False
+
+    def saveGraphSetting(self, folderDir, name):
+        graphSetting = self.getGraphSetting()
+
+        folderPath = pathlib.Path(folderDir)
+        graphSettingPath = folderPath.joinpath("{}.graphsetting".format(name))
+        np.save(str(graphSettingPath), graphSetting)
+
+    def getGraphSetting(self):
+        graphSetting = {
+            'symmetric': False
+        }
+        return copy.deepcopy(graphSetting)
