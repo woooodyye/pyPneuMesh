@@ -50,19 +50,23 @@ elif mode == "configMOO":
     mooDict = readMooDict('./scripts/trainLobster/data')
     v0 = mooDict['trussParam']['v0']
 
-    v0 = v0 * 0.1
-    v0_mean = v0.mean(axis=0)
-    v0_new = v0 - v0_mean
-    # v0_new = v0
-    mooDict['trussParam']['v0'] = v0_new
-
-    mooDict['graphSetting']['symmetric'] = True
-    mooDict['graphSetting']['channelMirrorMap'] = {0: 1, 2: -1, 3: -1}
-    # breakpoint()
-
-    m = Model(mooDict['trussParam'], mooDict['simParam'])
-
-    m.show()
+    #
+    # v0 = v0 * 0.1
+    # v0_mean = v0.mean(axis=0)
+    # v0_new = v0 - v0_mean
+    # # v0_new = v0
+    # mooDict['trussParam']['v0'] = v0_new
+    #
+    # mooDict['graphSetting']['symmetric'] = True
+    # mooDict['graphSetting']['channelMirrorMap'] = {0: 1, 2: -1, 3: -1}
+    # # breakpoint()
+    #
+    # m = Model(mooDict['trussParam'], mooDict['simParam'])
+    #
+    # a = np.zeros((4, 4))
+    # mooDict['actionSeqs'] = {0: a, 1: a}
+    # mooDict['objectives'] = {0: {'numLoop': 4, 'subObjectives': ['moveForward']},
+    #                          1: {'numLoop': 4, 'subObjectives': ['moveForward', 'minEnergy']}}
 
     moo = MOO(mooDict=mooDict)
     # breakpoint()
