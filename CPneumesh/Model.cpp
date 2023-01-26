@@ -117,7 +117,10 @@ std::pair<Eigen::VectorXd, Eigen::VectorXd> Model::step(VectorXd times, MatrixXd
           fFrictionMaxMag = velHorizontal.norm() / h;
         }
 
-        Force.row(iV) += -fFrictionMaxMag * velHorizontal / velHorizontal.norm();
+        if(velHorizontal.norm()!=0){
+            Force.row(iV) += -fFrictionMaxMag * velHorizontal / velHorizontal.norm();
+        }
+//        Force.row(iV) += -fFrictionMaxMag * velHorizontal / velHorizontal.norm();
 
       }
 

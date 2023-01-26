@@ -8,10 +8,10 @@ from pyPneuMesh.Graph import Graph
 from pyPneuMesh.MOO import MOO
 from pyPneuMesh.GA import GA
 
-# mode = "start"
+mode = "start"
 # mode = "continue"
 # mode = "load"
-mode = "configMOO"
+# mode = "configMOO"
 
 GACheckpointDir = "/Users/Roll/Desktop/pyPneuMesh-dev/pyPneuMesh/scripts/trainTable/output/2022-12-09_07-07-13/ElitePool_55.gacheckpoint.npy"
 
@@ -24,7 +24,7 @@ if mode == "start":
         'nWorkers': multiprocessing.cpu_count(),
 
         'folderDir': 'scripts/trainLobster/',
-        'graphMutationChance': 0.1,
+        'graphMutationChance': 0,
         'contractionMutationChance': 0.1,
         'contractionCrossChance': 0,
         'actionMutationChance': 0.2,
@@ -49,7 +49,7 @@ elif mode == "load":
 elif mode == "configMOO":
     mooDict = readMooDict('./scripts/trainLobster/data')
     v0 = mooDict['trussParam']['v0']
-
+    mooDict['trussParam']['v0'] = v0 * 1.4118
     #
     # v0 = v0 * 0.1
     # v0_mean = v0.mean(axis=0)
