@@ -65,23 +65,23 @@ class HalfGraph(object):
         vertexMirrorMap = dict()
         for iv, v in enumerate(self.model.v0):
             if iv not in vertexMirrorMap:
-                if abs(v[0]) < threshold:
+                if abs(v[1]) < threshold:
                     vertexMirrorMap[iv] = -1  # on the mirror plane
                 else:  # mirrored with another vertex
                     for ivMirror, vMirror in enumerate(self.model.v0):
                         if ivMirror == iv:
                             continue
 
-                        if abs(vMirror[1] - v[1]) < threshold and \
+                        if abs(vMirror[0] - v[0]) < threshold and \
                                 abs(vMirror[2] - v[2]) < threshold and \
-                                abs(-vMirror[0] - v[0]) < threshold:
+                                abs(-vMirror[1] - v[1]) < threshold:
                             assert (iv not in vertexMirrorMap)
                             assert (ivMirror not in vertexMirrorMap)
                             vertexMirrorMap[iv] = ivMirror
                             vertexMirrorMap[ivMirror] = iv
 
             if iv not in vertexMirrorMap:
-                print(iv)
+                # print(iv)
                 assert (False)
 
         edgeMirrorMap = dict()
@@ -170,6 +170,7 @@ class HalfGraph(object):
             ic = self.channels[i]
 
             # region set edgeChannel
+            print(self.channels)
             self.model.edgeChannel[ie] = ic
             ieMirror = self.edgeMirrorMap[ie]
 
@@ -179,6 +180,8 @@ class HalfGraph(object):
                 if ic == -1:
                     self.model.edgeChannel[ieMirror] = -1
                 else:
+                    print("ic is ", ic)
+                    print(self.channelMirrorMap)
                     icMirror = self.channelMirrorMap[ic]
                     if icMirror == -1:
                         icMirror = ic

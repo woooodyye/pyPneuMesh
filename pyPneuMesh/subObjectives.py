@@ -98,7 +98,7 @@ def objMinEnergy(vs: np.ndarray, vEnergys: np.ndarray):
     dx = (vs[-1].mean(0) - vs[0].mean(0))[0]
 
     # E is always positive, wants to minimize Energy.
-    return - (totalE / dx)
+    return - abs(totalE / dx)
 
 
 def objHelmetAlign(vs: np.ndarray):

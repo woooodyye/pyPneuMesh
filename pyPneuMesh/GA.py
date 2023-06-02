@@ -254,29 +254,37 @@ class GA(object):
         ratingsCol = ratings.reshape([ratings.shape[0], 1, ratings.shape[1]])
         ratingsRow = ratings.reshape([1, ratings.shape[0], ratings.shape[1]])
         dominatedMatrix = (ratingsCol <= ratingsRow).all(2) * (ratingsCol < ratingsRow).any(2)
-
+        
         Rs = np.ones(len(ratings), dtype=int) * -1
         R = 0
         while -1 in Rs:
             nonDominated = (~dominatedMatrix[:, np.arange(len(Rs))[Rs == -1]]).all(1) * (Rs == -1)
             Rs[nonDominated] = R
             R += 1
-
+            
         # get CD
-        CDMatrix = np.zeros_like(ratings, dtype=np.float)
-        sortedIds = np.argsort(ratings, axis=0)
-        CDMatrix[sortedIds[0], np.arange(len(ratings[0]))] = np.inf
-        CDMatrix[sortedIds[-1], np.arange(len(ratings[0]))] = np.inf
-        ids0 = sortedIds[:-1, :]
-        ids1 = sortedIds[1:, :]
-        distances = ratings[ids1, np.arange(len(ratings[0]))] - ratings[ids0, np.arange(len(ratings[0]))]
-        if ((ratings.max(0) - ratings.min(0)) > 0).all():
-            CDMatrix[sortedIds[1:-1, :], np.arange(len(ratings[0]))] = \
-                (distances[1:] + distances[:-1]) / (ratings.max(0) - ratings.min(0))
-        else:
-            CDMatrix[sortedIds[1:-1, :], np.arange(len(ratings[0]))] = np.inf
-        CDs = CDMatrix.mean(1)
-
+        CDs = np.zeros(len(ratings))
+        R = 0
+        while R in Rs:
+            ratingsSurface = ratings[Rs == R]
+            CDMatrix = np.zeros_like(ratingsSurface, dtype=np.float)
+            sortedIds = np.argsort(ratingsSurface, axis=0)
+            CDMatrix[sortedIds[0], np.arange(len(ratingsSurface[0]))] = np.inf
+            CDMatrix[sortedIds[-1], np.arange(len(ratingsSurface[0]))] = np.inf
+            ids0 = sortedIds[:-1, :]
+            ids1 = sortedIds[1:, :]
+            distances = ratingsSurface[ids1, np.arange(len(ratingsSurface[0]))] - ratingsSurface[ids0, np.arange(len(ratingsSurface[0]))]
+            
+            if ((ratingsSurface.max(0) - ratingsSurface.min(0)) > 0).all():
+                CDMatrix[sortedIds[1:-1, :], np.arange(len(ratingsSurface[0]))] = \
+                    (distances[1:] + distances[:-1]) / (ratingsSurface.max(0) - ratingsSurface.min(0))
+            else:
+                CDMatrix[sortedIds[1:-1, :], np.arange(len(ratingsSurface[0]))] = np.inf
+            CDsSurface = CDMatrix.mean(1)
+            CDs[Rs == R] = CDsSurface
+            R += 1
+        
+        
         return Rs, CDs
 
     def select(self):
@@ -362,7 +370,12 @@ class GA(object):
 
             for iGen in range(self.nGensPerPool):
                 self.refillGenePoolByMutationCrossRegeneration()
+                #test to see what's happening
                 self.evaluate()
+
+                #removed log data for debugging
+                # self.logPool(self.genePool, "gen:{:>4d}".format(
+                #     iGen), showAllGenes=True, showRValue=False)
                 self.select()
 
                 print(len(self.genePool))
