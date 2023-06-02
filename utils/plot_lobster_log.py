@@ -11,11 +11,7 @@ import matplotlib.pyplot as plt
 #              64 : 'scripts/trainTable_64/output/2023-03-22_18-01-24/', 
 # }
 
-elitePools = {2:'scripts/trainTable_2/output/2023-03-16_17-13-07/',
-              8:'scripts/trainTable_8/output/2023-03-16_17-16-25/', 
-              16: 'scripts/trainTable_16/output/2023-04-26_20-37-43/', 
-              32: 'scripts/trainTable_32/output/2023-04-06_04-05-10/',
-             64 : 'scripts/trainTable_64/output/2023-03-22_18-01-24/', 
+elitePools = {2:'scripts/trainLobster/output/2023-02-02_16-23-13/'
 }
 
 for j, fileDir in elitePools.items():
@@ -53,20 +49,30 @@ for j, fileDir in elitePools.items():
 
     x = []
     y = []
+    yBoth = []
     for i, value in enumerate(results):
         if value != []:
             x.append(i)
             y.append(value[1])
-    
-    plt.plot(x,y, '-o', label = str(j))
+            yBoth.append(value[3])
 
 
-plt.legend()
-plt.xlabel("iterations")
-plt.ylabel("max Distance")
-plt.title("max Distance vs Iterations for Table with multiple channels")
-plt.savefig("trainTable_alliterations_maxDistance.png")
+fig, ax = plt.subplots()
+#set the tick params
+ax.tick_params(direction="in")
 
-    # plt.plot(index, maxDistance)
-    # # plt.axis([0, 10, 3.8, 5])
-    # plt.savefig("test.png")
+plt.plot(x,y, label= "move forward only", color = "red")  # Add a label
+plt.plot(x,yBoth, label= "move forward and minimize energy", color = "blue")  # Add a label
+
+# Add the shaded variance
+# plt.fill_between(iterations, lower, upper, color='b', alpha=.1)
+titleName = "Iteration vs Max Distance Traveled"
+xLabelName = "Iterations"
+yLabelName = "Max Distance Travelled"
+figureName = "lobsterLog.png"
+plt.title(titleName)
+plt.xlabel(xLabelName, fontname ='PT Sans Narrow')
+plt.ylabel(yLabelName, fontname ='PT Sans Narrow')
+# plt.ylim((-500, 10))
+plt.legend(loc='lower right', frameon = False)  # Show the legend
+plt.savefig(figureName)
