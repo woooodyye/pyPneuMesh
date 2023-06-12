@@ -27,7 +27,6 @@ def getCriterion(mmo: MOO) -> Callable[[np.ndarray], np.ndarray]:
                     obj = subObjective(truss, targetMesh)
                 score = obj.execute()
                 rating.append(score)
-
         rating = np.array(rating)
         return rating
 

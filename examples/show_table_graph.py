@@ -24,7 +24,6 @@ model.fromHalfGraph()
 model.initHalfGraph()
 
 model.show()
-
 for i in range(5):
     model.mutateHalfGraph()
     model.show()

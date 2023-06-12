@@ -116,13 +116,16 @@ class MOO:
         self.model.numChannels = self.numChannels
 
         if self.randInit:
-            if self.model.symmetric:
-                self.model.toHalfGraph()
-                self.model.initHalfGraph()
-                self.model.fromHalfGraph()
-            else:
-                self.model.initGraph()
-                self.model.fromGraph()
+            #TODO revert this back
+            self.model.initSplitGraph()
+            self.model.fromSplitGraph()
+            # if self.model.symmetric:
+            #     self.model.toHalfGraph()
+            #     self.model.initHalfGraph()
+            #     self.model.fromHalfGraph()
+            # else:
+            #     self.model.initGraph()
+            #     self.model.fromGraph()
 
         self.model._reset()
 
@@ -161,7 +164,6 @@ class MOO:
         self.refreshModel()
 
         model = self.model
-        # breakpoint()
         model.inflateChannel = actionSeq[:, -1]
 
         vs = []

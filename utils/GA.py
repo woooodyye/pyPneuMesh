@@ -31,7 +31,7 @@ def getR(ratings: np.ndarray) -> (np.ndarray):
 
 def getCD(ratings: np.ndarray, Rs: np.ndarray) -> (np.ndarray):
     ratings = ratings.reshape(len(ratings), -1)
-    CDMatrix = np.zeros_like(ratings, dtype=np.float)
+    CDMatrix = np.zeros_like(ratings, dtype=np.float64)
     sortedIds = np.argsort(ratings, axis=0)
     CDMatrix[sortedIds[0], np.arange(len(ratings[0]))] = np.inf
     CDMatrix[sortedIds[-1], np.arange(len(ratings[0]))] = np.inf
@@ -148,7 +148,6 @@ class GeneticAlgorithm(object):
             scores = np.array(p.map(criterion, genePool))
 
         # scores = np.array([criterion(gene) for gene in genePool])
-
         for i in range(len(genePool)):
             genePool[i]['score'] = scores[i]
 
@@ -172,22 +171,6 @@ class GeneticAlgorithm(object):
 
         return genePool
 
-    # def select(self, genePool, nSurvivedMax):
-    #     scores = [gene['score'] for gene in genePool]
-    #     Rs = getR(np.array(scores))
-    #     CDs = getCD(np.array(scores), Rs)
-    #     idsSorted = np.lexsort((CDs, Rs))[::-1]
-    #     idsSurvived = idsSorted[:nSurvivedMax]
-    #     genePool = [genePool[i] for i in idsSurvived]
-    #
-    #     logging.info("{:<10} {:<15} {:<40} {:<10} {:<10}".format('i', 'address', 'score', 'R', 'CD'))
-    #
-    #     for i in range(len(genePool)):
-    #         logging.info(
-    #             "{:<10} {:<15} {:<40} {:<10} {:<10}".format(i, str(genePool[i]['moo'])[-15:], str(genePool[i]['score']),
-    #                                                         Rs[i], CDs[i]))
-    #
-    #     return genePool
 
     def mutateAndRegenerate(self, genePool, sizePool):
         nGeneration = sizePool - len(genePool)
@@ -289,36 +272,3 @@ class GeneticAlgorithm(object):
             else:
                 self.genePool = self.initPoolFromScratch(sizePool)
 
-        #
-        # self.pop = initPop(nPop=self.setting.nPop, lb=self.lb, ub=self.ub)
-        #
-        # self.ratings, self.Rs, self.CDs = evaluate(pop=self.pop, criterion=self.criterion,
-        #                                            nWorkers=self.setting.nWorkers)
-        #
-        # self.sort()
-        # self.heroes.append(self.pop[0])
-        # self.ratingsHero.append(self.ratings[0])
-        #
-        # nExtinctions = 0
-        # for iGen in range(self.setting.nGenMax):
-        #     extinct, reviving, nExtinctions = self.disaster(nExtinctions=nExtinctions)
-        #
-        #     self.select()
-        #     self.cross()
-        #     self.mutate()
-        #     self.regenerate()
-        #     self.evaluate()
-        #     self.sort()
-        #
-        #     self.log(  extinct=extinct, reviving=reviving)
-        #     if iGen % 5 == 0 and self.setting.saveHistory:
-        #         self.saveHistory(iGen=iGen, appendix=self.history.ratingsBestHero[-1])
-        #
-        # if self.setting.plot:
-        #     # try:
-        #     self.history.plot()
-        #     # except Exception as e:
-        #     #     print('plot', e)
-        #
-        #
-        # return self.getBest()

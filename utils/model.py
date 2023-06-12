@@ -9,6 +9,9 @@ import networkx as nx
 import copy
 from gym import Env
 from gym.spaces import Discrete, Box
+from utils.graph import Graph
+from utils.halfGraph import HalfGraph
+from utils.splitGraph import SplitGraph
 
 import utils
 from utils.geometry import getFrontDirection
@@ -20,264 +23,9 @@ tPrev = time.time()
 import numpy as np
 
 
-class Graph(object):
-    def __init__(self, numChannels:int, ivsSub:np.array, iesSub:np.array, esSub:np.array):
-        self.numChannels = int(numChannels)
-        self.nV = len(ivsSub)
-        self.nE = len(iesSub)
-        
-        self.ivsSub = ivsSub      # mapping from original vertex indices to new indices of the subGraph
-        self.iesSub = iesSub      # mapping from original edge indices to new indices of the subGraph
-        self.esSub = esSub       # ne x 2, edges of the subGraph
-        self.channels = np.ones(self.nE) * -1    # ne, indices of channels of edges
-        self.contractions = np.zeros(self.nE)  # ne, int value of contractions, Model.contractionLevels number of types of contractions
-        
-        self.esChannels = []
-        
-        self.incM = np.zeros([self.nV, self.nE])     # vertex-edge incidence matrix
-        for ie, e in enumerate(self.esSub):
-            self.incM[e[0], ie] = 1
-            self.incM[e[1], ie] = 1
-        
-        self.ieAdjList = []     # nE x X, each row includes indices of adjacent edges of ie, np.array
-        for ie in range(self.nE):
-            iv0 = self.esSub[ie, 0]
-            iv1 = self.esSub[ie, 1]
-            iesConnected0 = np.where(self.incM[iv0] == 1)[0]
-            iesConnected1 = np.where(self.incM[iv1] == 1)[0]
-            iesConnected = np.concatenate([iesConnected0, iesConnected1])
-            self.ieAdjList.append(iesConnected)
-        
-        self.init()
-    
-    def init(self):
-        self.contractions = np.random.randint(0, Model.contractionLevels, self.contractions.shape)
-        
-        # randomly choose numChannel edges and assign channels
-        dice = np.arange(self.nE)
-        np.random.shuffle(dice)
-        ies = dice[:self.numChannels]
-        for ic, ie in enumerate(ies):
-            self.channels[ie] = ic
-        
-        # grow channels to fill the entire graph
-        while (self.channels == -1).any():
-            iesToGrow = []
-            for ie in range(self.nE):
-                iesConnected = self.ieAdjList[ie]
-                if (self.channels[iesConnected] == -1).any():
-                    iesToGrow.append(ie)
-            
-            ie = np.random.choice(iesToGrow)
-            iesConnected = self.ieAdjList[ie]
-            np.random.shuffle(iesConnected)
-            for ieConnected in iesConnected:
-                if self.channels[ieConnected] == -1:
-                    self.channels[ieConnected] = self.channels[ie]
-        
-    def channelConnected(self, ic):
-        # check if channel ic is interconnected
-        nEic = (self.channels == ic).sum()  # number of edges of channel ic
-        
-        for ie in range(self.nE):
-            if self.channels[ie] == ic:
-                break
-        
-        queue = [ie]    # ies in the queue
-        visited = set()     # ies visited
-        
-        while queue:
-            ie = queue.pop(0)
-            visited.add(ie)
-            
-            iv0 = self.esSub[ie, 0]
-            iv1 = self.esSub[ie, 1]
-            iesConnected0 = np.where(self.incM[iv0] == 1)[0]
-            iesConnected1 = np.where(self.incM[iv1] == 1)[0]
-            iesConnected = np.concatenate([iesConnected0, iesConnected1])
-            for ie in iesConnected:
-                if ie not in visited and self.channels[ie] == ic:
-                    queue.append(ie)
-        
-        return nEic == len(visited)
-    
-    def mutate(self):
-        # mutate one digit of contractions and one edge channel
-        self.contractions[np.random.choice(len(self.contractions))] = np.random.randint(Model.contractionLevels)
-        
-        ies = np.arange(self.nE)
-        np.random.shuffle(ies)
-        for ie in ies:
-            iesConnected = self.ieAdjList[ie]
-            
-            icOld = self.channels[ie]
-            icsConnected = self.channels[iesConnected].tolist()
-            icsConnected = set(icsConnected)
-            icsConnected.remove(icOld)
-            icsConnected = np.array(list(icsConnected))
-            if len(icsConnected):
-                np.random.shuffle(icsConnected)
-            
-            for icNew in icsConnected:
-                self.channels[ie] = icNew   # change the channel of the edge
-                if self.channelConnected(icOld):    # if the changed channel is still connected
-                    return True     # mutation finished
-                else:
-                    self.channels[ie] = icOld   # revert channel change
-        print('mutation failed')
-        return False
-
-class HalfGraph(object):
-    def __init__(self):
-        self.ins_o = []  # nn, original indices of nodes in a halfgraph
-        self.edges = []  # indices of two incident nodes, ne x 2, ne is the number of edges in a halfgraph
-        self.ies_o = []  # ne, original indices of edges in a halfgraph
-        self.channels = []  # ne, indices of channels
-        self.contractions = []  # ne, int value of contractions
-        self.esOnMirror = []  # ne, bool, if the edge in on the mirror plane
-
-    def add_edges_from(self, esInfo):
-        # input:
-        # esInfo: [(iv0, iv1, {'ie': , 'channel': , 'contraction': })]
-
-        ne = len(esInfo)
-        self.ies_o = np.zeros(ne, dtype=int)
-        self.edges = np.zeros([ne, 2], dtype=int)
-        self.channels = np.zeros(ne, dtype=int)
-        self.contractions = np.zeros(ne, dtype=int)
-        self.esOnMirror = np.zeros(ne, dtype=bool)
-
-        for i, eInfo in enumerate(esInfo):
-            ie = eInfo[2]['ie']  # original index of the edge
-            self.ies_o[i] = ie
-
-            self.ins_o.append(eInfo[0])
-            self.ins_o.append(eInfo[1])
-            self.channels[i] = int(eInfo[2]['channel'])
-            self.contractions[i] = int(eInfo[2]['contraction'])
-            self.esOnMirror[i] = bool(eInfo[2]['onMirror'])
-
-        self.ins_o = sorted(list(set(self.ins_o)))
-
-        for i, eInfo in enumerate(esInfo):
-            in0 = np.where(self.ins_o == eInfo[0])[0][0]
-            in1 = np.where(self.ins_o == eInfo[1])[0][0]
-            self.edges[i, 0] = in0
-            self.edges[i, 1] = in1
-
-    def iesIncidentMirror(self):
-        # indices of edges on / connecting to the mirror plane
-        ies = np.arange(len(self.edges))[self.esOnMirror.copy()]
-        ins_onMirror = self.incidentNodes(ies)
-        ies_IncidentMirror = self.incidentEdges(ins_onMirror)
-        return ies_IncidentMirror
-
-    def iesNotMirror(self):
-        ies = np.arange(len(self.edges))[~self.esOnMirror]
-        return ies
-
-    def incidentNodes(self, ies):
-        # get the incident nodes of a set of edges
-        ins = np.array(list(set(self.edges[ies].reshape(-1))))
-        return ins
-
-    def incidentEdges(self, ins):
-        # get the incident edges of a set of noes
-        isin = np.isin(self.edges, ins)
-        ifEdgesIncident = isin[:, 0] + isin[:, 1]
-        ies = np.arange(len(self.edges))[ifEdgesIncident]
-        return ies
-
-    def iesAroundChannel(self, ic, unassigned=True):
-        # breakpoint()
-        # get ies incident but not belonged to the channel ic and not assigned
-        boolEsChannel = self.channels == ic  # bool, es in the channel
-        ins = self.incidentNodes(np.arange(len(self.edges))[boolEsChannel])
-
-        isin = np.isin(self.edges, ins)
-        boolEsIncidentChannel = isin[:, 0] + isin[:, 1]
-        boolEsAroundChannel = boolEsIncidentChannel * (~boolEsChannel)
-        boolEsUnassigned = self.channels == -1
-        if unassigned:
-            bools = boolEsAroundChannel * boolEsUnassigned
-        else:
-            bools = boolEsAroundChannel
-        if True in bools:
-            return np.arange(len(self.edges))[bools]
-        else:
-            return None
-
-    def channelConnected(self, ic):
-        iesUnvisited = np.arange(len(self.edges))[self.channels == ic].tolist()  # ies of the channel
-
-        if len(iesUnvisited) == 0:  # no graph exist at all
-            return False
-
-        ie = iesUnvisited.pop()
-
-        queue = [ie]
-
-        while len(queue) != 0:
-            ie = queue.pop(0)
-
-            ins = self.incidentNodes([ie])
-            iesAdjacent = self.incidentEdges(ins)
-
-            for ieAdjacent in iesAdjacent:
-                if ieAdjacent in iesUnvisited:
-                    iesUnvisited.remove(ieAdjacent)
-                    queue.append(ieAdjacent)
-
-        if len(iesUnvisited) != 0:
-            return False
-        else:
-            return True
 
 
 class Model(object):
-
-    # MOO setting
-    # objectives
-    # model
-    # GA
-
-    # h = 0.001
-
-    # gravity
-    # dampingRatio = 0.999
-
-    # k = 200000    # mass spring vs yongs modulus
-
-    # nodeWeight
-
-    # lengths
-    # 101, 124, 154, 174
-
-    # numChannels
-
-    # angleThreshold = np.pi / 2
-
-    # GA control
-    # numActions
-    # numStepsPerAction
-    # nLoopsSimulate
-
-    # GA parameters
-
-    # contractionInterval = 0.1
-    # contractionLevels = 4
-    # maxMaxContraction = round(contractionInterval * (contractionLevels - 1) * 100) / 100
-    # contractionPercentRate = 1e-3
-    # gravityFactor = 9.8 * 10
-    # gravity = 1
-    # defaultMinLength = 1.2
-    # defaultMaxLength = defaultMinLength / (1 - maxMaxContraction)
-    # frictionFactor = 0.8
-    # numStepsPerActuation = int(2 / h)
-    # defaultNumActions = 1
-    # defaultNumChannels = 4
-    # angleThreshold = np.pi / 2
-    # angleCheckFrequency = numStepsPerActuation / 20
 
     @staticmethod
     def configure(configDir="./data/config.json"):
@@ -792,13 +540,59 @@ class Model(object):
 
         self.fromHalfGraph()
         
+    #splitGraph
+    def initSplitGraph(self):
+        #hardcodeStuff for now
+        iesSubs = {}
+        iesSubs[0] = np.array([29, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 75, 76, 77, 78, 79, 80, 81, 82, 83],dtype = int)
+        iesSubs[1] = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 45, 46, 47, 48, 49, 50, 51, 52, 53, 129, 130, 131],dtype = int)
+        iesSubs[2] = np.array([59, 60, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 84, 85, 86, 87, 88, 89, 90, 91, 92],dtype = int)
+        iesSubs[3] = np.array([95, 96, 98, 99, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 133, 134],dtype =int)
+
+        ivsSubs = {}
+        esSubs = {}
+        for i in range(4):
+            iesSub = iesSubs[i]
+            ivsSubs[i] =  sorted(set(self.e[iesSub].reshape(-1).tolist()))
+            esSub = []
+            ivsSub = ivsSubs[i]
+            for ieSub in iesSub:
+                e = self.e[ieSub]
+                iv0 = ivsSub.index(e[0])
+                iv1 = ivsSub.index(e[1])
+                esSub.append([iv0, iv1])
+            esSub = np.array(esSub, dtype=int)
+            esSubs[i] = esSub
+        self.G = SplitGraph(2,  ivsSubs=ivsSubs,iesSubs=iesSubs,esSubs=esSubs, contractionLevels= Model.contractionLevels, numGraphs= 4)
+    def mutateSplitGraph(self):
+        self.G.mutate()
+
+    def fromSplitGraph(self):
+        #This is not as straight forward ?? 
+        self.maxContraction = np.zeros(len(self.e))
+        # self.edgeChannel = np.zeros(len(self.e))
+        self.edgeChannel = np.ones(len(self.e)) * 8
+
+        G = self.G
+
+        for i in range(len(G.iesSubs)):
+            for ieSub, ie in enumerate(G.iesSubs[i]):
+                self.maxContraction[ie] = G.graphs[i].contractions[ieSub] * Model.contractionInterval
+                self.edgeChannel[ie] = 2 * i + G.graphs[i].channels[ieSub]  #change index
+        
+        # for ieSub, ie in enumerate(G.iesSub):
+        #     self.maxContraction[ie] = G.contractions[ieSub] * Model.contractionInterval
+        #     # breakpoint()
+        #     self.edgeChannel[ie] = G.channels[ieSub]
+        self.edgeChannel = self.edgeChannel.astype(np.int64)
+        print("self edgeChannel color is", self.edgeChannel)
+
     # graph
     def initGraph(self):
         # create a graph with only active edges, assuming it is an interconnected graph
         
         iesSub = np.where(self.edgeActive)[0]
         ivsSub = sorted(set(self.e[iesSub].reshape(-1).tolist()))
-        
         esSub = []
         for ieSub in iesSub:
             e = self.e[ieSub]
@@ -806,13 +600,13 @@ class Model(object):
             iv1 = ivsSub.index(e[1])
             esSub.append([iv0, iv1])
         esSub = np.array(esSub, dtype=int)
-            
-        self.G = Graph(numChannels=self.numChannels, ivsSub=ivsSub, iesSub=iesSub, esSub=esSub)
+        self.G = Graph(numChannels=self.numChannels, ivsSub=ivsSub, iesSub=iesSub, esSub=esSub, contractionLevels=Model.contractionLevels)
         
     def mutateGraph(self):
         self.G.mutate()
     
-    def fromGraph(self):
+    def fromGraph(self): 
+        #TODO Take a look at this, maybe this is where it's not showing properly
         # set values for self.maxContraction, self.edgeChannel
         self.maxContraction = np.zeros(len(self.e))
         self.edgeChannel = np.zeros(len(self.e))
@@ -821,18 +615,23 @@ class Model(object):
         
         for ieSub, ie in enumerate(G.iesSub):
             self.maxContraction[ie] = G.contractions[ieSub] * Model.contractionInterval
+            # breakpoint()
             self.edgeChannel[ie] = G.channels[ieSub]
         
-        self.edgeChannel = self.edgeChannel.astype(np.int)
+        self.edgeChannel = self.edgeChannel.astype(np.int64)
+        # breakpoint()
+
         
         
     def mutate(self):
-        if self.symmetric:
-            self.mutateHalfGraph()
-            self.fromHalfGraph()
-        else:
-            self.mutateGraph()
-            self.fromGraph()
+        self.mutateSplitGraph()
+        self.fromSplitGraph()
+        # if self.symmetric:
+        #     self.mutateHalfGraph()
+        #     self.fromHalfGraph()
+        # else:
+        #     self.mutateGraph()
+        #     self.fromGraph()
     
     
     def frontDirection(self):
@@ -868,7 +667,7 @@ class Model(object):
         for e in self.e:
             A[e[0], e[1]] = 1
             A[e[1], e[0]] = 1
-        print(A)
+        # print(A)
 
         for i in range(len(self.v)):
             for j in range(len(self.v)):
@@ -925,13 +724,15 @@ class Model(object):
 
 
         # breakpoint()
-        for ic in list(np.arange(self.numChannels)):
+        #TODO fix this hardcode for testing purposes for now
+        for ic in list(np.arange(9)):
             ies = np.arange(len(self.e))[self.edgeChannel == ic]
 
             # if ic == -1:
             #     assert(len(ies) == 0)
             # else:
             #     assert(len(ies) != 0)
+
 
             es = self.e[ies]
 

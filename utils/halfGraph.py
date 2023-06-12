@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class HalfGraph(object):
     def __init__(self):
         self.ins_o = []  # nn, original indices of nodes in a halfgraph

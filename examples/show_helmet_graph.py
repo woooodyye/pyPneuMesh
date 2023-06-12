@@ -2,7 +2,7 @@ from utils.moo import MOO
 from utils.objectives.locomotion import MoveForward, FaceForward, TurnLeft, LowerBodyMax
 
 MOOsetting = {
-    'modelDir': './data/half_helmet.json',
+    'modelDir': './data/half_helmet_new.json',
     'numChannels': 4,
     'numActions': 4,
     'numObjectives': 3,
@@ -15,7 +15,7 @@ MOOsetting = {
     'objectives': [[MoveForward, FaceForward], [TurnLeft], [LowerBodyMax]]
 }
 
-moo = MOO(MOOsetting, randInit=True)
+moo = MOO(MOOsetting)
 model = moo.model
 
 model.show()
@@ -23,4 +23,4 @@ model.show()
 for i in range(5):
     model.mutateGraph()
     model.fromGraph()
-    # model.show()
+    model.show()
