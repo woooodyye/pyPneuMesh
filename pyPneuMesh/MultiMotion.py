@@ -49,6 +49,26 @@ class MultiMotion(object):
 
         return vs, vEnergys
 
+    @staticmethod
+    def saveAnimation(multiMotion, folderDir, name, iAction, numLoop):
+        import pathlib
+        vs, vEnergys = multiMotion.simulate(0, 1)
+        data = {
+            'Vs': vs,
+            'E': multiMotion.model.e,
+            'edgeChannel': multiMotion.model.edgeChannel,
+            'h': multiMotion.model.h,
+        }
+        folderPath = pathlib.Path(folderDir)
+        animationPath = folderPath.joinpath("{}.animation".format(name))
+        np.save(str(animationPath), data)
+        return data
+
+
+    def saveAnimation(self, folderDir, name, iAction, numLoop):
+        return MultiMotion.saveAnimation(self, folderDir, name, iAction, numLoop)
+
+
     def animate(self, iAction, numLoop, speed=1.0):
         vs, vEnergys = self.simulate(iAction, numLoop)
         self.model.animate(vs, speed=speed, singleColor=True)

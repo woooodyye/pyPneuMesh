@@ -65,16 +65,16 @@ class HalfGraph(object):
         vertexMirrorMap = dict()
         for iv, v in enumerate(self.model.v0):
             if iv not in vertexMirrorMap:
-                if abs(v[1]) < threshold:
+                if abs(v[0]) < threshold:
                     vertexMirrorMap[iv] = -1  # on the mirror plane
                 else:  # mirrored with another vertex
                     for ivMirror, vMirror in enumerate(self.model.v0):
                         if ivMirror == iv:
                             continue
 
-                        if abs(vMirror[0] - v[0]) < threshold and \
+                        if abs(vMirror[1] - v[1]) < threshold and \
                                 abs(vMirror[2] - v[2]) < threshold and \
-                                abs(-vMirror[1] - v[1]) < threshold:
+                                abs(-vMirror[0] - v[0]) < threshold:
                             assert (iv not in vertexMirrorMap)
                             assert (ivMirror not in vertexMirrorMap)
                             vertexMirrorMap[iv] = ivMirror
