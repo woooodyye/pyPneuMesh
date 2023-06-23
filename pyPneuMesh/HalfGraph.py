@@ -8,6 +8,7 @@ from pyPneuMesh.Model import Model
 class HalfGraph(object):
     def __init__(self, model: Model, graphSetting):
         self.channelMirrorMap = graphSetting['channelMirrorMap'].copy()
+        self.mirrorPlane = graphSetting.get('mirrorPlane', 'y') #Determine whether it's x or y
         self.model = model
         self.edgeMirrorMap = self.__getEdgeMirrorMap()
 
@@ -61,27 +62,31 @@ class HalfGraph(object):
     # May not be consistent right now
     def __getEdgeMirrorMap(self):
         threshold = 0.01
-
+        #makeEdgeMirrorMap based on MirrorPlane default Y
+        indexM = 0
+        indexN = 1
+        if self.mirrorPlane == "y":
+            indexM = 1
+            indexN = 0
         vertexMirrorMap = dict()
         for iv, v in enumerate(self.model.v0):
             if iv not in vertexMirrorMap:
-                if abs(v[1]) < threshold:
+                if abs(v[indexN]) < threshold:
                     vertexMirrorMap[iv] = -1  # on the mirror plane
                 else:  # mirrored with another vertex
                     for ivMirror, vMirror in enumerate(self.model.v0):
                         if ivMirror == iv:
                             continue
 
-                        if abs(vMirror[0] - v[0]) < threshold and \
+                        if abs(vMirror[indexM] - v[indexM]) < threshold and \
                                 abs(vMirror[2] - v[2]) < threshold and \
-                                abs(-vMirror[1] - v[1]) < threshold:
+                                abs(-vMirror[indexN] - v[indexN]) < threshold:
                             assert (iv not in vertexMirrorMap)
                             assert (ivMirror not in vertexMirrorMap)
                             vertexMirrorMap[iv] = ivMirror
                             vertexMirrorMap[ivMirror] = iv
 
             if iv not in vertexMirrorMap:
-                # print(iv)
                 assert (False)
 
         edgeMirrorMap = dict()
@@ -170,7 +175,6 @@ class HalfGraph(object):
             ic = self.channels[i]
 
             # region set edgeChannel
-            print(self.channels)
             self.model.edgeChannel[ie] = ic
             ieMirror = self.edgeMirrorMap[ie]
 
@@ -180,8 +184,6 @@ class HalfGraph(object):
                 if ic == -1:
                     self.model.edgeChannel[ieMirror] = -1
                 else:
-                    print("ic is ", ic)
-                    print(self.channelMirrorMap)
                     icMirror = self.channelMirrorMap[ic]
                     if icMirror == -1:
                         icMirror = ic

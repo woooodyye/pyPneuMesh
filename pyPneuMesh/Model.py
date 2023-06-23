@@ -21,6 +21,15 @@ class Model(object):
         # load from trussParam
         self.v0 = trussParam['v0']
         self.e = trussParam['e']
+        
+        eSubs =[29, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 75, 76, 77, 78, 79, 80, 81, 82, 83,
+                      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 45, 46, 47, 48, 49, 
+                      50, 51, 52, 53, 129, 130, 131,
+                     59, 60, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 84, 85, 86, 87, 88, 89, 90, 91, 92,
+                     95, 96, 98, 99, 101, 102, 103, 104, 105, 106, 107, 108, 109,
+                       110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121,
+                         122, 123, 124, 125, 126, 127, 128, 133, 134]# this is some abitrary value fof lobster testing for now
+        self.eSubs = np.array(eSubs, dtype = int)
         self.edgeChannel = getDefaultValue(trussParam, 'edgeChannel',
                                            np.zeros(len(self.e), dtype=int)  # [0, 0, ...]
                                            )
@@ -103,26 +112,42 @@ class Model(object):
         }
         return copy.deepcopy(simParam)
 
-    def actionSeq2timeNLength(self, actionSeq):
+    def actionSeq2timeNLength(self, actionSeq, dissolve):
         # actionSeq: [numActions, numChannel]
+        # Change this inresponse to dissolve, separate the length and contractions
+        # into different groups now 
+        #TODO Make this better formatted, hardcode for now to test things 
 
         time = 0
         times = [time]
-        lengths = [self.maxLengths.copy()]  # target lengths
+        # lengths = [self.maxLengths.copy()]  # target lengths
+        #Passive Beam channel is -1 #dissolvable beam same idea? 
+        #Double check this later
+        eSubs = np.arange(0,len(self.maxLengths))
+        if dissolve:
+            eSubs = self.eSubs
+
+        lengths = [self.maxLengths.copy()[eSubs]]
 
         for iAction in range(len(actionSeq)):
             action = actionSeq[iAction]
-            length = self.maxLengths.copy()
-            contraction = np.zeros(len(self.e))
+            length = self.maxLengths.copy()[eSubs] #SubLengths Ones with edges in the group
+
+            contraction = np.zeros(len(eSubs))
             for iChannel in range(self.getNumChannel()):
                 if not action[iChannel]:  # not contracting
                     continue  # contraction does not change
                 else:
                     boolThisChannel = self.edgeChannel == iChannel
+                    boolThisChannel = boolThisChannel[eSubs] #TODO double checkthis newly added
                     contraction[boolThisChannel] = self.CONTRACTION_PER_LEVEL * \
-                                                   self.contractionLevel[boolThisChannel] * \
+                                                   self.contractionLevel[eSubs][boolThisChannel] * \
                                                    action[iChannel]
-            length[self.edgeActive] -= contraction[self.edgeActive]
+
+            if dissolve:
+                length -= contraction #All of them should be active
+            else:
+                length[self.edgeActive] -= contraction[self.edgeActive] #How to deal with activeEdges
 
             time += self.ACTION_TIME
             times.append(time)
@@ -133,7 +158,7 @@ class Model(object):
 
         return times, lengths
 
-    def step(self, numSteps=1, times=None, lengths=None):
+    def step(self, numSteps=1, times=None, lengths=None, dissolve = False):
         if times is None:
             times = np.array([0.0], dtype=np.float64)
             lengths = np.array([getLength(self.v0, self.e)], dtype=np.float64).reshape(1, len(self.e))
@@ -141,50 +166,18 @@ class Model(object):
         assert (times.ndim == 1 and times.dtype == np.float64)
         assert (lengths.ndim == 2 and lengths.shape[0] == times.shape[0] and lengths.dtype == np.float64)
 
-        cModel = CModel(self.k, self.h, self.gravity, self.damping, self.friction, self.v0, self.e,
+
+        #pusdo
+        # e nonDissolvable .. objective ... 
+        e = self.e
+        if dissolve:
+            e = self.e[self.eSubs]
+        cModel = CModel(self.k, self.h, self.gravity, self.damping, self.friction, self.v0, e,
                         self.CONTRACTION_SPEED)
         vs, vEnergys = cModel.step(times, lengths, numSteps)
-        # breakpoint()
         vs = vs.reshape((numSteps + 1), len(self.v0), 3)
-        vEnergys = vEnergys.reshape((numSteps + 1), len(self.e))
+        vEnergys = vEnergys.reshape((numSteps + 1), len(e))
         return vs, vEnergys
-
-    # def getL(self, V, E):
-    #     return V
-
-    # Numpy version of step, used to compare with c++ version.
-    # def stepSlow(self, times, lengths, numSteps):
-    #     v = self.v0
-    #     vel = 0  # this maybe numpy too
-    #
-    #     LTarget = lengths[0]
-    #     L0 = self.getL(self.v0, self.e)
-    #     for iStep in range(numSteps):
-    #         force = 0  # numpy array
-    #
-    #         time = self.h * iStep
-    #         # set LTarget
-    #         for iTime in range(len(times)):
-    #             if time > times[iTime]:
-    #                 LTarget = lengths[iTime]
-    #
-    #     # set L0
-    #     # self.e.length
-    #     for iE in range(self.e.length()):
-    #         if (L0[iE] != LTarget[iE]):
-    #             diff = LTarget[iE] - L0[iE];
-    #             sign = diff / abs(diff);
-    #             dL0 = sign * self.CONTRACTION_SPEED * h;
-    #             if abs(dL0) > abs(diff):
-    #                 L0[iE] = LTarget[iE]
-    #             else:
-    #                 L0[iE] += dL0
-    #
-    #     # calculate edge force
-    #     newL = self.getL(v, self.e);
-    #     vec01 = V(E(all, 1), all) - V(E(all, 0), all); # vectors from V[e[0]] to V[e[1]]
-    #
-    #     for iE in range(self.e.length()):
 
     def show(self, v=None):
         import polyscope as ps

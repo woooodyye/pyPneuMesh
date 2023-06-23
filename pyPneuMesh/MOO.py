@@ -25,9 +25,7 @@ class MOO(object):
             actionSeqs = mooDict['actionSeqs'].copy()
             objectives = mooDict['objectives']
             graphSetting = mooDict['graphSetting']
-            # breakpoint()
             self.model = Model(trussParam, simParam)
-            # breakpoint()
             self.multiMotion = MultiMotion(actionSeqs, self.model)
             self.multiObjective = MultiObjective(objectives, self.multiMotion)
             self.graph = Graph(graphSetting, self.model)

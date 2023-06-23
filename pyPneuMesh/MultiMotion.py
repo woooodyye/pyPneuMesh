@@ -36,20 +36,20 @@ class MultiMotion(object):
             self.actionSeqs[i][maskMutation] = multiMotion.actionSeqs[i][maskMutation]
             multiMotion.actionSeqs[i][maskMutation] = tmp
 
-    def simulate(self, iAction, numLoop):
+    def simulate(self, iAction, numLoop, dissolve= False):
         actionSeq = self.actionSeqs[iAction]
         actionSeq = np.vstack([actionSeq] * numLoop)
 
         assert (actionSeq.shape[1] >= self.model.getNumChannel())
 
-        times, lengths = self.model.actionSeq2timeNLength(actionSeq)
+        times, lengths = self.model.actionSeq2timeNLength(actionSeq, dissolve)
         totalTime = times[-1] + self.model.ACTION_TIME
         numSteps = int(totalTime / self.model.h)
-        vs, vEnergys = self.model.step(numSteps, times, lengths)
+        vs, vEnergys = self.model.step(numSteps, times, lengths, dissolve)
 
         return vs, vEnergys
 
-    def animate(self, iAction, numLoop, speed=1.0):
-        vs, vEnergys = self.simulate(iAction, numLoop)
+    def animate(self, iAction, numLoop, speed=1.0, dissolve = False):
+        vs, vEnergys = self.simulate(iAction, numLoop, dissolve)
         self.model.animate(vs, speed=speed, singleColor=True)
         return vs

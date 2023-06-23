@@ -8,62 +8,53 @@ from pyPneuMesh.Model import Model
 
 class FullGraph(object):
     def __init__(self, model):
-        # self.model = model
-        #
-        # self.numChannels = model.numChannel
-        # self.nV = model.nV
-        # self.nE = model.nE
-        #
-        # self.ivsSub = ivsSub  # mapping from original vertex indices to new indices of the subGraph
-        # self.iesSub = iesSub  # mapping from original edge indices to new indices of the subGraph
-        # self.esSub = esSub  # ne x 2, edges of the subGraph
-        # self.channels = np.ones(self.nE) * -1  # ne, indices of channels of edges
-        # self.contractions = np.zeros(
-        #     self.nE)  # ne, int value of contractions, Model.contractionLevels number of types of contractions
-        #
-        # self.esChannels = []
-        #
-        # self.incM = np.zeros([self.nV, self.nE])  # vertex-edge incidence matrix
-        # for ie, e in enumerate(self.esSub):
-        #     self.incM[e[0], ie] = 1
-        #     self.incM[e[1], ie] = 1
-        #
-        # self.ieAdjList = []  # nE x X, each row includes indices of adjacent edges of ie, np.array
-        # for ie in range(self.nE):
-        #     iv0 = self.esSub[ie, 0]
-        #     iv1 = self.esSub[ie, 1]
-        #     iesConnected0 = np.where(self.incM[iv0] == 1)[0]
-        #     iesConnected1 = np.where(self.incM[iv1] == 1)[0]
-        #     iesConnected = np.concatenate([iesConnected0, iesConnected1])
-        #     self.ieAdjList.append(iesConnected)
-        #
-        # self.init()
-        pass
+        self.model = model
+        
+        self.numChannels = 6 #TODO fix this with some value in graphSetting
 
-    def init(self):
-        self.contractions = np.random.randint(0, Model.contractionLevels, self.contractions.shape)
+        iesSub = np.where(model.edgeActive)[0]
+        ivsSub = sorted(set(model.e[iesSub].reshape(-1).tolist()))
+        esSub = []
+        for ieSub in iesSub:
+            e = model.e[ieSub]
+            iv0 = ivsSub.index(e[0])
+            iv1 = ivsSub.index(e[1])
+            esSub.append([iv0, iv1])
+        esSub = np.array(esSub, dtype=int)
 
-        # randomly choose numChannel edges and assign channels
-        dice = np.arange(self.nE)
-        np.random.shuffle(dice)
-        ies = dice[:self.numChannels]
-        for ic, ie in enumerate(ies):
-            self.channels[ie] = ic
+        self.iesSub = iesSub  # mapping from original edge indices to new indices of the subGraph
+        self.ivsSub = ivsSub  # mapping from original vertex indices to new indices of the subGraph
+        self.esSub = esSub  # ne x 2, edges of the subGraph
 
-        # grow channels to fill the entire graph
-        while (self.channels == -1).any():
-            iesToGrow = []
-            for ie in range(self.nE):
-                iesConnected = self.ieAdjList[ie]
-                if (self.channels[iesConnected] == -1).any():
-                    iesToGrow.append(ie)
 
-            ie = np.random.choice(iesToGrow)
-            iesConnected = self.ieAdjList[ie]
-            np.random.shuffle(iesConnected)
-            for ieConnected in iesConnected:
-                if self.channels[ieConnected] == -1:
-                    self.channels[ieConnected] = self.channels[ie]
+        self.nV = len(ivsSub)
+        self.nE = len(iesSub)
+
+        self.channels = model.edgeChannel[iesSub]
+        self.contractions = np.zeros(
+            self.nE)  # ne, int value of contractions, Model.contractionLevels number of types of contractions
+        
+        self.esChannels = []
+
+        
+        self.incM = np.zeros([self.nV, self.nE])  # vertex-edge incidence matrix
+        for ie, e in enumerate(self.esSub):
+            self.incM[e[0], ie] = 1
+            self.incM[e[1], ie] = 1
+        
+        self.ieAdjList = []  # nE x X, each row includes indices of adjacent edges of ie, np.array
+        for ie in range(self.nE):
+            iv0 = self.esSub[ie, 0]
+            iv1 = self.esSub[ie, 1]
+            iesConnected0 = np.where(self.incM[iv0] == 1)[0]
+            iesConnected1 = np.where(self.incM[iv1] == 1)[0]
+            iesConnected = np.concatenate([iesConnected0, iesConnected1])
+            self.ieAdjList.append(iesConnected)
+
+            #set contraction here 
+            contraction = self.model.contractionLevel[ie]
+            self.contractions[ie] = contraction
+
 
     def channelConnected(self, ic):
         # check if channel ic is interconnected
@@ -123,6 +114,53 @@ class FullGraph(object):
         folderPath = pathlib.Path(folderDir)
         graphSettingPath = folderPath.joinpath("{}.graphsetting".format(name))
         np.save(str(graphSettingPath), graphSetting)
+
+
+    #Now toModel is part of the graph now
+    def toModel(self):
+        for ieSub, ie in enumerate(self.iesSub):
+            self.model.contractionLevel[ie] = self.contractions[ieSub]
+            # breakpoint()
+            self.model.edgeChannel[ie] = self.channels[ieSub]
+        
+        self.model.edgeChannel = self.model.edgeChannel.astype(np.int64)
+
+
+    def randomize(self):
+        #randomize channel to
+        self.contractions = np.random.randint(0, self.model.NUM_CONTRACTION_LEVEL, self.contractions.shape)
+        self.channels = np.ones(self.nE) * -1  # ne, indices of channels of edges
+
+        # randomly choose numChannel edges and assign channels
+        dice = np.arange(self.nE)
+        np.random.shuffle(dice)
+        ies = dice[:self.numChannels]
+        for ic, ie in enumerate(ies):
+            self.channels[ie] = ic
+
+        # grow channels to fill the entire graph
+        while (self.channels == -1).any():
+            iesToGrow = []
+            for ie in range(self.nE):
+                iesConnected = self.ieAdjList[ie]
+                if (self.channels[iesConnected] == -1).any() and self.channels[ie]!=-1: #TODO newly added
+                    iesToGrow.append(ie)
+
+            ie = np.random.choice(iesToGrow)
+            iesConnected = self.ieAdjList[ie]
+            np.random.shuffle(iesConnected)
+            for ieConnected in iesConnected:
+                if self.channels[ieConnected] == -1:
+                    self.channels[ieConnected] = self.channels[ie]
+        
+    def cross(self, graph, chance):
+        maskMutation = np.random.rand(len(self.contractions))
+        for ie in range(len(self.contractions)):
+            if maskMutation[ie] < chance:
+                tmp = self.contractions[ie]
+                self.contractions[ie] = graph.contractions[ie]
+                graph.contractions[ie] = tmp
+
 
     def getGraphSetting(self):
         graphSetting = {

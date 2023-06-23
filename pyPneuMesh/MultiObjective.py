@@ -22,7 +22,7 @@ class MultiObjective(object):
 
         scores = []
         for i in range(len(self.objectives)):
-            vs, vEnergys = self.multiMotion.simulate(i, self.objectives[i]['numLoop'])
+            vs, vEnergys = self.multiMotion.simulate(i, self.objectives[i]['numLoop'], self.objectives[i]['dissolve'])
 
             for j in range(len(self.objectives[i]['subObjectives'])):
                 subObjectiveName = self.objectives[i]['subObjectives'][j]

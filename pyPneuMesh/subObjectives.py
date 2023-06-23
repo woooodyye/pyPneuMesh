@@ -112,3 +112,34 @@ def objHelmetAlign(vs: np.ndarray):
     meshParam = readNpy('scripts/testLobster/lobster/lobster.trussparam.npy')
 
     # return -np.sqrt(((vs[:, 32] - vs[:, 29]) ** 2).sum(1).max())
+
+
+def objLeftClawMove(vs : np.ndarray, vEnergys: np.ndarray):
+    left_claw  = np.array([10 ,21, 22, 23, 24, 25, 26, 30, 31, 32],dtype = int)
+    dx = (vs[-1][left_claw].mean(0) - vs[0][left_claw].mean(0))[0]
+    velX = -dx
+    return velX
+
+def objRightClawMove(vs : np.ndarray, vEnergys : np.ndarray):
+    right_claw  = np.array([9 ,11 ,12 ,13 ,14, 15, 16, 27, 28, 29],dtype = int)
+    dx = (vs[-1][right_claw].mean(0) - vs[0][right_claw].mean(0))[0]
+    velX = dx
+    return velX
+
+def objHeadMove(vs : np.ndarray, vEnergys : np.ndarray ):
+    head  = np.array([ 0,  1  ,2,  3 , 4,  5,  6,  7 , 8, 17 ,18, 19],dtype = int)
+    dy = (vs[-1][head].mean(0) - vs[0][head].mean(0))[1]
+    velY = dy
+    return velY    
+
+def objBodyMove(vs : np.ndarray, vEnergys : np.ndarray):
+    body  = np.array([20, 33, 34, 35, 36, 37 ,38, 39, 40, 41 ,42, 43, 44],dtype = int)
+    dy = (vs[-1][body].mean(0) - vs[0][body].mean(0))[1]
+    velY = -dy
+    return velY
+    
+
+def objMoveUpward(vs: np.ndarray , vEnergys : np.ndarray):
+    dy = (vs[-1].mean(0) - vs[0].mean(0))[1]
+    velY= dy
+    return velY
