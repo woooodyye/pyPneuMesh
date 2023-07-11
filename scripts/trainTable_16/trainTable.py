@@ -60,4 +60,4 @@ elif mode == "configMOO":
     mooDict['graphSetting']['channelMirrorMap'] = d;
     moo = MOO(mooDict=mooDict)
 
-    moo.saveAll('scripts/trainTable_16/data', 'table')
+    # moo.saveAll('scripts/trainTable_16/data', 'table')

@@ -10,14 +10,14 @@ from pyPneuMesh.GA import GA
 
 dict = readMooDict('scripts/trainTable_8_move/data')
 
-mode = "start"
+# mode = "start"
 # mode = "continue"
 # mode = "load"
-# mode = "configMOO"
+mode = "configMOO"
 
 GACheckpointDir = "scripts/trainTable_8/move/output/2023-02-26_19-39-41/ElitePool_580.gacheckpoint.npy"
 
-breakpoint()
+# breakpoint()
 if mode == "start":
     GASetting = {
         'nGenesPerPool': 128,
@@ -59,4 +59,4 @@ elif mode == "configMOO":
 
     moo = MOO(mooDict=mooDict)
 
-    moo.saveAll('scripts/trainTable_8_move/data', 'table')
+    # moo.saveAll('scripts/trainTable_8_move/data', 'table')

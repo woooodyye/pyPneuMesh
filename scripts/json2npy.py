@@ -5,7 +5,7 @@ from pyPneuMesh.utils import json2Data, data2Npy
 # folderDir = "/Users/Roll/Desktop/pyPneuMesh-dev/pyPneuMesh/data/"
 folderDir = 'data/'
 names = [
-    'lobster_new'
+    'lobster_dis'
     # 'Lobster_0',
     # 'Lobster_1',
     # 'lobster_forward',
