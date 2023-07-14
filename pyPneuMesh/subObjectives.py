@@ -81,7 +81,7 @@ def objTableHigh(vs: np.ndarray, vEnergys: np.ndarray):
     return abs(zMean - zTarget)
 
 
-def objGrabLobster(vs: np.ndarray):
+def objGrabLobster(vs: np.ndarray, vEnergys: np.ndarray):
     return -np.sqrt(((vs[:, 32] - vs[:, 29]) ** 2).sum(1).max())
 
 
@@ -143,3 +143,36 @@ def objMoveUpward(vs: np.ndarray , vEnergys : np.ndarray):
     dy = (vs[-1].mean(0) - vs[0].mean(0))[1]
     velY= dy
     return velY
+
+
+def objMoveAway(vs: np.ndarray, vEnergys: np.ndarray):
+    dx = (vs[-1].mean(0) - vs[0].mean(0))[0]
+    dy = (vs[-1].mean(0) - vs[0].mean(0))[1]
+    velX = abs(dx) + abs(dy)
+    return velX
+
+def objFaceLeft(vs: np.ndarray, vEnergys: np.ndarray):
+    # 2d direction
+    vecFront = getFrontDirection(vs[0], vs[-1], np.array([-1,0,0]))  # unit Vector
+    assert (abs((vecFront ** 2).sum() - 1) < 1e-6)
+    vecX = np.array([-1, 0, 0])
+    alignment = (vecFront * vecX).sum()
+    return alignment
+
+def objMoveLeft(vs: np.ndarray, vEnergys: np.ndarray):
+    dx = (vs[-1].mean(0) - vs[0].mean(0))[0]
+    velX = -dx
+    return velX
+
+def objLeftAway(vs: np.ndarray, vEnergys : np.ndarray):
+    left = np.array([0, 4, 6, 10, 21, 22, 23, 24, 25, 26, 30, 31, 32])
+    dx = (vs[-1][left].mean(0) - vs[0][left].mean(0))[0]
+    dy = (vs[-1][left].mean(0) - vs[0][left].mean(0))[1]
+    velX = abs(dx) + abs(dy)
+    return velX
+def objRightAway(vs: np.ndarray, vEnergys : np.ndarray):
+    right = np.array([1, 5, 7, 9, 11, 12, 13, 14, 15, 16, 27, 28, 29])
+    dx = (vs[-1][right].mean(0) - vs[0][right].mean(0))[0]
+    dy = (vs[-1][right].mean(0) - vs[0][right].mean(0))[1]
+    velX = abs(dx) + abs(dy)
+    return velX

@@ -325,6 +325,8 @@ class HalfGraph(object):
                 self.contractions[ie] = graph.contractions[ie]
                 graph.contractions[ie] = tmp
 
+        self.toModel()
+        graph.toModel()
     def iesIncidentMirror(self):
         # indices of edges on / connecting to the mirror plane
         ies = np.arange(len(self.edges))[self.esOnMirror.copy()]

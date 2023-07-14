@@ -10,7 +10,7 @@ class FullGraph(object):
     def __init__(self, model):
         self.model = model
         
-        self.numChannels = 6 #TODO fix this with some value in graphSetting
+        self.numChannels = 3 #TODO fix this with some value in graphSetting
 
         iesSub = np.where(model.edgeActive)[0]
         ivsSub = sorted(set(model.e[iesSub].reshape(-1).tolist()))
@@ -82,10 +82,14 @@ class FullGraph(object):
 
         return nEic == len(visited)
 
-    def mutate(self):
-        # mutate one digit of contractions and one edge channel
-        self.contractions[np.random.choice(len(self.contractions))] = np.random.randint(Model.contractionLevels)
+    def mutate(self, graphMutationChance, contractionMutationChance):
+        if np.random.random() < graphMutationChance:
+            self.mutateGraph()
+        self.mutateContraction(contractionMutationChance)
+        self.toModel()
 
+    def mutateGraph(self):
+        # mutate one digit of contractions and one edge channel
         ies = np.arange(self.nE)
         np.random.shuffle(ies)
         for ie in ies:
@@ -107,6 +111,15 @@ class FullGraph(object):
                     self.channels[ie] = icOld  # revert channel change
         print('mutation failed')
         return False
+    
+    def mutateContraction(self, chance):
+        maskMutation = np.random.rand(len(self.contractions))
+        contraction = np.random.randint(
+            np.zeros(len(self.contractions)), self.model.NUM_CONTRACTION_LEVEL * np.ones(len(self.contractions)))
+        for ie in range(len(self.contractions)):
+            if maskMutation[ie] < chance:
+                self.contractions[ie] = contraction[ie]
+        return 
 
     def saveGraphSetting(self, folderDir, name):
         graphSetting = self.getGraphSetting()
@@ -152,6 +165,7 @@ class FullGraph(object):
             for ieConnected in iesConnected:
                 if self.channels[ieConnected] == -1:
                     self.channels[ieConnected] = self.channels[ie]
+        self.toModel() #Forgot about this
         
     def cross(self, graph, chance):
         maskMutation = np.random.rand(len(self.contractions))
@@ -161,9 +175,12 @@ class FullGraph(object):
                 self.contractions[ie] = graph.contractions[ie]
                 graph.contractions[ie] = tmp
 
+        self.toModel() #convert changes to model
+        graph.toModel() #convert changes to model
 
     def getGraphSetting(self):
         graphSetting = {
-            'symmetric': False
+            'symmetric': False,
+            'dissolve' : False
         }
         return copy.deepcopy(graphSetting)

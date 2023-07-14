@@ -7,21 +7,18 @@ from pyPneuMesh.Model import Model
 
 
 class SplitGraph(object):
-    def __init__(self, model):
+    def __init__(self, model, graphSetting):
         self.model = model
         
-        self.numChannels = 2 #fix this with some value in graphSetting
+        self.numChannels = graphSetting['numChannels']#fix this with some value in graphSetting
         #i will figure it out tonight though
-        self.groups = 4 #TODO fix this arbitrary for now 
+        self.groups = graphSetting['groups'] #TODO fix this arbitrary for now 
         
 
         self.nE = len(model.edgeChannel)
-        self.iesSubs =[
-[29, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 75, 76, 77, 78, 79, 80, 81, 82, 83],
-[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 45, 46, 47, 48, 49, 50, 51, 52, 53, 129, 130, 131],
-[59, 60, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 84, 85, 86, 87, 88, 89, 90, 91, 92],
-[95, 96, 98, 99, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 133, 134]
-        ] #dictionary where each group has a list of iesSub
+        self.iesSubs =graphSetting['iesSubs'] #maynot exist for non-split graph,
+        #should exist though
+        #dictionary where each group has a list of iesSub
         # for i in range
         for i in range(len(self.iesSubs)):
             self.iesSubs[i] =  np.array(self.iesSubs[i])
@@ -175,8 +172,9 @@ class SplitGraph(object):
             channels = self.randomizeGroup(ieAdjList, nE)
             for ieSub, ie in enumerate(self.iesSubs[i]): #
                 #assign channels to the overall channels of the entire graph
-                self.channels[ie] = 2* i + channels[ieSub]
+                self.channels[ie] = self.numChannels * i + channels[ieSub]
         self.contractions = np.random.randint(0, self.model.NUM_CONTRACTION_LEVEL, self.contractions.shape)
+        self.toModel() #Forgot about this
         return
     
     def randomizeGroup(self, ieAdjList, nE):
@@ -214,11 +212,18 @@ class SplitGraph(object):
                 tmp = self.contractions[ie]
                 self.contractions[ie] = graph.contractions[ie]
                 graph.contractions[ie] = tmp
-
+        #does this ever get applies even, only mutatae the graph, not the model
+        # graph.toModel()
+        #TODO do this for splitgraph
+        self.toModel()
+        graph.toModel()
 
     def getGraphSetting(self):
         graphSetting = {
             'symmetric': False,
-            'dissolve': True
+            'dissolve': True, 
+            'iesSubs' : self.iesSubs,
+            'numChannels' : self.numChannels,
+            'groups' : self.groups
         }
         return copy.deepcopy(graphSetting)

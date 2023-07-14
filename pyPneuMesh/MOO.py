@@ -51,7 +51,7 @@ class MOO(object):
 
     def randomize(self):
         self.multiMotion.randomize()
-        self.graph.randomize()
+        self.graph.randomize()  #only randomize multimotion for this experiment
 
     def mutate(self, graphMutationChance, contractionMutationChance, actionMutationChance):
         self.graph.mutate(

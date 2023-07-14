@@ -240,6 +240,7 @@ class Model(object):
                 except:
                     pass
         ps.register_curve_network('y axis', np.array([[0, 0, 0], [0, 1, 0]]), np.array([[0, 1]]))
+        ps.register_curve_network('x axis', np.array([[0, 0, 0], [1, 0, 0]]), np.array([[0, 1]]))
         ps.set_user_callback(callback)
         ps.show()
 

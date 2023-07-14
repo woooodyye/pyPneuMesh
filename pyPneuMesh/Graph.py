@@ -17,7 +17,7 @@ class Graph(object):
         if symmetric:
             return HalfGraph(model, graphSetting)
         if dissolve:
-            return SplitGraph(model)
+            return SplitGraph(model, graphSetting)
         else:
             return FullGraph(model)
 
