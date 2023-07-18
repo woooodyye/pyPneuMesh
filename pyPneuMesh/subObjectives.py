@@ -82,8 +82,8 @@ def objTableHigh(vs: np.ndarray, vEnergys: np.ndarray):
 
 
 def objGrabLobster(vs: np.ndarray, vEnergys: np.ndarray):
-    return -np.sqrt(((vs[:, 32] - vs[:, 29]) ** 2).sum(1).max())
-
+    return -np.sqrt(((vs[6000:, 32] - vs[6000:, 29]) ** 2).sum(1).max())
+    #after the first actionSeqs
 
 def objLowerBodyMax(vs: np.ndarray, vEnergys: np.ndarray):
     return -vs[:, :, 2].max()
@@ -176,3 +176,23 @@ def objRightAway(vs: np.ndarray, vEnergys : np.ndarray):
     dy = (vs[-1][right].mean(0) - vs[0][right].mean(0))[1]
     velX = abs(dx) + abs(dy)
     return velX
+
+def objTailAway(vs : np.ndarray, vEnergys : np.ndarray):
+    tail = np.array([3, 17, 18, 19, 20, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45])
+    dx = (vs[-1][tail].mean(0) - vs[0][tail].mean(0))[0]
+    dy = (vs[-1][tail].mean(0) - vs[0][tail].mean(0))[1]
+    velX = abs(dx) + abs(dy)
+    return velX
+
+def objHoldClaw(vs : np.ndarray, vEnergys : np.ndarray):
+    left = np.array([-2.52636027 , 0.53775461 ,1.45712186])
+    right = np.array([-2.54300972, -0.31732311, 1.45712186])
+
+
+    left_diff = np.sqrt(((vs[6000:, 29] - left) ** 2).sum(1).max())
+    
+    right_diff = np.sqrt(((vs[6000:, 32] - right) ** 2).sum(1).max())
+
+    return -(left_diff + right_diff)
+
+

@@ -45,6 +45,7 @@ class MultiMotion(object):
         times, lengths = self.model.actionSeq2timeNLength(actionSeq, dissolve)
         totalTime = times[-1] + self.model.ACTION_TIME
         numSteps = int(totalTime / self.model.h)
+        print("numSteps is", numSteps)
         vs, vEnergys = self.model.step(numSteps, times, lengths, dissolve)
 
         return vs, vEnergys
